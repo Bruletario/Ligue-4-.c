@@ -9,12 +9,16 @@
 const int vazio = 0; //o que está na matriz enquanto não há jogada
 const int player1 = 1;
 const int player2 = 2;
+const int humano = 0;
+const int cpu = 1;
+
 //valores p players
 
 struct jogador{
     char nome[50]; //nome do player
     int vitorias; //vítorias que ele tem
     int jogadas; //quantas jogadas ele fez na partida atual
+    int modo_de_jogo; //guarda qual o modo de jogo atual
 };
 
 struct partida{
@@ -81,6 +85,10 @@ void desenhar_tabuleiro(struct partida jogo){
         printf("+---+---+---+---+---+---+---+\n"); 
     }
 }
+
+void menu_iniciar(){
+	
+	}
 
 
 /*teste de visuzalizacao
