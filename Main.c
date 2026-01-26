@@ -104,3 +104,9 @@ int main() {
 
     return 0;
 } */
+
+//== Lógica ==// 
+// funções que executam a jogada do usuário
+
+//==Main==//
+//Laço que permite persistência do jogo
