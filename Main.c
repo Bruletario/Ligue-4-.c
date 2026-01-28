@@ -184,16 +184,36 @@ void iniciar_tabuleiro(struct partida *jogo){
 }
 
 int validar(int coluna, struct partida jogo){
-    int altura = -1; // se a linha estiver cheia da erro
-    for(int i = 0; i<LINHAS;i++){ //percorre as linhas
-        if(jogo.matriz[i][coluna].ocupante == VAZIO){ // se estiver vazio, sobe uma linha
+    int altura = -1; // Valor padrão de erro, para numero invalido ou coluna cheia 
+    
+    if((coluna<1) || (coluna>7)){
+        return altura; // Retorna erro, pois coluna está fora do faixa
+    }
+    
+    for(int i = 0; i<LINHAS;i++){ // Percorre as linhas de baixo para cima na coluna escolhida
+        if(jogo.matriz[i][coluna-1].ocupante == VAZIO){ // Se estiver vazio retorna em qual linha a ficha pode ser jogada
             altura = i; 
             break;
         }
-    }
+    } // Caso a coluna esteja cheia, não vai cair em nenhum caso VAZIO e retorna o valor de erro (-1)
 
     return altura; //retorna a linha jogavel
 }
+
+/*
+
+
+
+void jogada_cpu(){
+    int coluna_rand;
+    result_valida = validar(coluna_rand); // Testa se existe 
+    if(validar(coluna_rand) != -1){
+
+    }
+}
+*/
+
+
 
 int inserir_ficha(struct partida *jogo, int coluna, int id_jogador){
 
