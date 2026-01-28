@@ -18,7 +18,7 @@
 // a matriz vai ser uma struct para podermos guardar outros valores alem da coordeanda, como cor, tipo de ficha, etc.
 struct celula{
     int ocupante; //quem ocupa a celula vazio, p1 ou p2
-    int tipoFicha; //vai ser util pra implementar outras fihcas
+    int tipo_ficha; //vai ser util pra implementar outras fihcas
     char simbolo[5]; // simbolo ou vazio
 };
 
@@ -37,11 +37,11 @@ struct partida{
     struct celula matriz[LINHAS][COLUNAS]; //matriz que vamos usar
     struct jogador j1;
     struct jogador j2;
-    int jogadorAtual; //qual o jogador da vez
+    int jogador_atual; //qual o jogador da vez
     int turno; //turno atual
-    int modoJogo;
+    int modo_jogo;
     int venceu; // 0 nao ou 1 sim
-    int gameOn; // 0 nao ou 1 sim
+    int game_on; // 0 nao ou 1 sim
 };
 
 //== PARTE VISUAL ==//
@@ -138,8 +138,6 @@ void exibir_cabecalho(){
     printf("  1   2   3   4   5   6   7  \n");
 }
 
-
-
 void desenhar_tabuleiro(struct partida jogo){
 
     limpar_tela();
@@ -170,34 +168,19 @@ void desenhar_tabuleiro(struct partida jogo){
     }
 }
 
-
-//teste de 
-int main() {
-    configurar_ambiente_win(); 
-    
-    struct partida jogoAtual;
-    
-    // Inicializar matriz 
-    for(int i=0; i<LINHAS; i++) {
-        for(int j=0; j<COLUNAS; j++) {
-            jogoAtual.matriz[i][j].ocupante = VAZIO;
-        }
-    }
-    
-    // teste visual: colocando pecas manuais
-    jogoAtual.matriz[5][3].ocupante = PLAYER_1; // P1 na base
-    jogoAtual.matriz[4][3].ocupante = PLAYER_2; // P2 em cima
-    
-    desenhar_tabuleiro(jogoAtual);
-    
-    printf("\nTeste concluido. Pressione Enter.");
-    getchar();
-    
-    return 0;
-}
-
 //== Lógica ==// 
-// funções que executam a jogada do usuário
 
+void iniciar_tabuleiro(struct partida *jogo){
+
+    for(int i=0; i<LINHAS; i++){
+        for(int j=0; j<COLUNAS; j++){
+
+        jogo->matriz[i][j].ocupante = VAZIO; // altera o endereço de memoria matriz e preenche ela com 0 (vazio)
+        jogo->matriz[i][j].tipo_ficha = FICHA_COMUM; // define que as fichas são padrão
+        strcpy(jogo->matriz[i][j].simbolo, " "); //define os simbolos da matriz para "nada"
+
+         }
+    }       
+}
 //==Main==//
 //Laço que permite persistência do jogo
