@@ -182,5 +182,21 @@ void iniciar_tabuleiro(struct partida *jogo){
          }
     }       
 }
+
+
+
+int validar(int coluna, struct partida jogo){
+    int altura = -1;
+    for(int i = 0; i<LINHAS;i++){
+        if(jogo.matriz[i][coluna].ocupante == 0){
+            altura = i;
+            break;
+        }
+    }
+
+    return altura;
+}
+
+
 //==Main==//
 //Laço que permite persistência do jogo
