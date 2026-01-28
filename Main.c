@@ -183,20 +183,33 @@ void iniciar_tabuleiro(struct partida *jogo){
     }       
 }
 
-
-
 int validar(int coluna, struct partida jogo){
-    int altura = -1;
-    for(int i = 0; i<LINHAS;i++){
-        if(jogo.matriz[i][coluna].ocupante == 0){
-            altura = i;
+    int altura = -1; // se a linha estiver cheia da erro
+    for(int i = 0; i<LINHAS;i++){ //percorre as linhas
+        if(jogo.matriz[i][coluna].ocupante == VAZIO){ // se estiver vazio, sobe uma linha
+            altura = i; 
             break;
         }
     }
 
-    return altura;
+    return altura; //retorna a linha jogavel
 }
 
+int inserir_ficha(struct partida *jogo, int coluna, int id_jogador){
 
+    for(int i = LINHAS - 1 ; i>=0; i--){ //percorre a matriz de baixo pra cima
+       if(jogo->matriz[i][coluna].ocupante ==VAZIO){ //verifica se a coordenada é vazia
+
+        jogo->matriz[i][coluna].ocupante == id_jogador; //substitui o ocupante para o player que jogou
+        jogo->matriz[i][coluna].tipo_ficha == FICHA_COMUM; //substitui para ficha comum
+        strcpy(jogo->matriz[i][coluna].simbolo, ficha); //substitui o simbolo para o do player
+        return i; // retorna a linha 
+
+       }
+    }
+
+    return -1; //se a linha estiver cheia 
+
+}
 //==Main==//
 //Laço que permite persistência do jogo
