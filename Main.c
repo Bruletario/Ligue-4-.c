@@ -1,7 +1,8 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <time.h> // Necessário para o rand() funcionar bem
 
 //constantes globais como #define para substituicao literal do valor
 
@@ -184,26 +185,23 @@ void iniciar_tabuleiro(struct partida *jogo){
 }
 
 int validar(int coluna, struct partida jogo){
-    int altura = -1; // Valor padrão de erro, para numero invalido ou coluna cheia 
-    
-    if((coluna<1) || (coluna>7)){
-        return altura; // Retorna erro, pois coluna está fora do faixa
-    }
-    
-    for(int i = 0; i<LINHAS;i++){ // Percorre as linhas de baixo para cima na coluna escolhida
-        if(jogo.matriz[i][coluna-1].ocupante == VAZIO){ // Se estiver vazio retorna em qual linha a ficha pode ser jogada
-            altura = i; 
-            break;
-        }
-    } // Caso a coluna esteja cheia, não vai cair em nenhum caso VAZIO e retorna o valor de erro (-1)
+int altura = -1; // Valor padrao de erro
 
-    return altura; //retorna a linha jogavel
+    if((coluna < 0) || (coluna > 6)){ // Verifica se a coluna existe 
+    return altura;
+    }
+
+    for(int i = LINHAS - 1; i >= 0; i--){ // Percorre de baixo pra cima
+    if(jogo.matriz[i][coluna].ocupante == VAZIO){
+    altura = i; // Achou uma linha vazia
+    return altura; // Retorna a linha encontrada
+    }
+}
+
+return altura; // Se chegou aqui a coluna ta cheia (-1)
 }
 
 /*
-
-
-
 void jogada_cpu(){
     int coluna_rand;
     result_valida = validar(coluna_rand); // Testa se existe 
@@ -215,21 +213,175 @@ void jogada_cpu(){
 
 
 
-int inserir_ficha(struct partida *jogo, int coluna, int id_jogador){
+void inserir_ficha(struct partida *jogo, int linha, int coluna, int id_jogador){
+    //como validar jogada já garante que tem como jogar, apenas gravamos na memomoria
 
-    for(int i = LINHAS - 1 ; i>=0; i--){ //percorre a matriz de baixo pra cima
-       if(jogo->matriz[i][coluna].ocupante ==VAZIO){ //verifica se a coordenada é vazia
-
-        jogo->matriz[i][coluna].ocupante == id_jogador; //substitui o ocupante para o player que jogou
-        jogo->matriz[i][coluna].tipo_ficha == FICHA_COMUM; //substitui para ficha comum
-        strcpy(jogo->matriz[i][coluna].simbolo, ficha); //substitui o simbolo para o do player
-        return i; // retorna a linha 
-
-       }
-    }
-
-    return -1; //se a linha estiver cheia 
+    jogo->matriz[linha][coluna].ocupante = id_jogador; //substitui o ocupante para o player que jogou
+    jogo->matriz[linha][coluna].tipo_ficha = FICHA_COMUM; //substitui para ficha comum
+    strcpy(jogo->matriz[linha][coluna].simbolo, ficha); //substitui o simbolo para o do player
 
 }
+
+// verifica se há um vencedor ao decorrer das jogadas
+int verificar_vitoria(struct partida jogo, int jogador) {
+int cont;
+
+// vrifica se tem 4 fichas na HORIZONTAL
+for (int i = 0; i < LINHAS; i++) {
+    cont = 0;
+    for (int j = 0; j < COLUNAS; j++) {
+        if (jogo.matriz[i][j].ocupante == jogador) {
+            cont++;
+            if (cont == 4) return 1;
+        } else {
+            cont = 0;
+        }
+    }
+}
+
+// Verifica VERTICAL 
+for (int j = 0; j < COLUNAS; j++) {
+    cont = 0;
+    for (int i = 0; i < LINHAS; i++) {
+        if (jogo.matriz[i][j].ocupante == jogador) {
+            cont++;
+            if (cont == 4) return 1;
+        } else {
+            cont = 0;
+        }
+    }
+}
+
+// Verifica DIAGONAL(principal) 
+for (int i = 0; i < LINHAS - 3; i++) {
+    for (int j = 0; j < COLUNAS - 3; j++) {
+        if (jogo.matriz[i][j].ocupante == jogador &&
+            jogo.matriz[i+1][j+1].ocupante == jogador &&
+            jogo.matriz[i+2][j+2].ocupante == jogador &&
+            jogo.matriz[i+3][j+3].ocupante == jogador) {
+            return 1;
+        }
+    }
+}
+
+// Verifica DIAGONAL(secundária)
+for (int i = 3; i < LINHAS; i++) {
+    for (int j = 0; j < COLUNAS - 3; j++) {
+        if (jogo.matriz[i][j].ocupante == jogador &&
+            jogo.matriz[i-1][j+1].ocupante == jogador &&
+            jogo.matriz[i-2][j+2].ocupante == jogador &&
+            jogo.matriz[i-3][j+3].ocupante == jogador) {
+            return 1;
+        }
+    }
+}
+
+
+return 0;// ninguém venceu
+}
+
+void trocar_turno(struct partida *jogo) {
+    if (jogo->jogador_atual == PLAYER_1) { //se o jogador atual for o player 1, muda para o dois
+        jogo->jogador_atual = PLAYER_2;
+    } else {jogo->jogador_atual = PLAYER_1;} // se nao, joga o player 1
+    jogo->turno++; //mais um turno é somado
+}
+
 //==Main==//
-//Laço que permite persistência do jogo
+int main() {
+struct partida jogo;
+int opcao_menu;
+int coluna_escolhida;
+int linha_encontrada; // Vai receber o retorno do validar
+int tipo_atual;
+
+// Semente para números aleatórios
+srand(time(NULL));
+
+configurar_ambiente_win();
+
+opcao_menu = mostar_menu_principal();
+
+if (opcao_menu == 1) {
+// Seleção de Modo
+printf("1. Player vs Player\n");
+printf("2. Player vs CPU\n");
+printf("3. CPU vs CPU\n");
+printf("Escolha o modo: ");
+scanf("%d", &jogo.modo_jogo);
+
+solicitar_nomes(&jogo.j1, &jogo.j2, jogo.modo_jogo);
+
+iniciar_tabuleiro(&jogo);
+jogo.jogador_atual = PLAYER_1;
+jogo.turno = 1;
+jogo.game_on = 1;
+jogo.venceu = 0;
+
+// Loop do jogo
+while (jogo.game_on == 1) {
+    
+    desenhar_tabuleiro(jogo);
+    
+    printf("\n--- Turno: %d ---\n", jogo.turno);
+    
+    // Define quem é o jogador da vez para facilitar os ifs abaixo
+    struct jogador *jogador_vez;
+    if(jogo.jogador_atual == PLAYER_1) jogador_vez = &jogo.j1;
+    else (jogador_vez = &jogo.j2);
+
+    printf("Vez de: %s\n", jogador_vez->nome);
+    tipo_atual = jogador_vez->tipo;
+
+    // obtem coluna
+    if (tipo_atual == 0) { // Humano
+        printf("Escolha uma coluna (1 a 7): ");
+        scanf("%d", &coluna_escolhida);
+        coluna_escolhida = coluna_escolhida - 1; // Ajusta para 0-6
+    } else { // CPU
+        printf("Computador pensando...\n");
+        // Tenta gerar um numero aleatorio
+        coluna_escolhida = rand() % COLUNAS; 
+    }
+
+    // Aqui verificamos se a jogada é valida
+
+    linha_encontrada = validar(coluna_escolhida, jogo);
+
+    if (linha_encontrada != -1) {
+        // Caso validar retorne um valor valido:
+
+        inserir_ficha(&jogo, linha_encontrada, coluna_escolhida, jogo.jogador_atual);
+        
+        // verificando a vitoria e imprimindo mensagem informando quem ganhou 
+        if (verificar_vitoria(jogo, jogo.jogador_atual)) {
+             desenhar_tabuleiro(jogo);
+             printf("\n %s VENCEU O JOGO!\n", jogador_vez->nome);
+             jogo.game_on = 0;
+             jogo.venceu = 1;
+             getchar(); getchar();
+            break;
+        }                 
+
+
+        trocar_turno(&jogo);
+        
+    } else {
+        // Se validar retornou -1(ou seja,erro):
+        if(tipo_atual == 0){ // Só avisa se for humano
+            printf("\nJOGADA INVALIDA! Coluna cheia ou inexistente.\n");
+            printf("Pressione Enter para tentar de novo...");
+            getchar(); getchar();
+        }
+        // Se for CPU, ele só vai repetir o loop e tentar outro numero
+    }
+    
+    // Pausa visual pro modo CPU vs CPU,ainda ta bem rapido entao talvez mude
+    if (jogo.modo_jogo == 3) {
+        for(int k=0; k<300000000; k++); 
+    }
+}
+}
+
+return 0;
+}
