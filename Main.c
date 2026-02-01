@@ -1,7 +1,6 @@
-
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
+#include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
 #include <time.h> // Necessário para o rand() funcionar bem
 
 //constantes globais como #define para substituicao literal do valor
@@ -51,6 +50,7 @@ struct partida{
 const char cor_reset[] = "\033[0m"; //padrao
 const char cor_p1[] = "\033[1;34m"; // Azul
 const char cor_p2[] = "\033[1;31m"; // Vermelho
+const char cor_atencao[] = "\x1b[33m"; //amarelo em hexadecimal pq nao achei em ascii
 const char ficha[] = "█";          // ficha do jogo
 const char tabuleiro_vazio[] = " ";
 
@@ -71,14 +71,30 @@ void configurar_ambiente_win(){ //garantir que nao vai ter problerma do bloco no
 //vai guardar o que o usuario escolheu
 int mostar_menu_principal(){
     int opcao;
+    int resultado;
 
-    printf("====== LIGUE 4 ======\n");
-    printf("1. Iniciar novo jogo\n");
-    printf("2. Hall da fama\n");
-    printf("3. Sair\n");
-    printf("Escolha uma opção:\n");
+    do {
+        limpar_tela(); //garante o terminal limpo
+        printf("====== LIGUE 4 ======\n");
+        printf("1. Iniciar novo jogo\n");
+        printf("2. Hall da fama\n");
+        printf("3. Sair\n");
+        printf("Escolha uma opção: ");
 
-    scanf("%d", &opcao);
+        resultado = scanf("%d", &opcao); // captura o que o usuario digitou
+
+        if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
+            printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
+            
+            while (getchar() != '\n'); // limpa o buffer, isso aqui é pre evitar algum tipoi de buffer por lixo no buffer
+        
+            printf("Pressione Enter para tentar novamente...");
+            getchar();
+        } else {
+            break; 
+        }
+
+    } while (1); // isso aqui só para no break
 
     return opcao;
 }
@@ -302,8 +318,9 @@ configurar_ambiente_win();
 
 opcao_menu = mostar_menu_principal();
 
-if (opcao_menu == 1) {
+if (opcao_menu == 1){ 
 // Seleção de Modo
+limpar_tela();
 printf("1. Player vs Player\n");
 printf("2. Player vs CPU\n");
 printf("3. CPU vs CPU\n");
@@ -322,15 +339,21 @@ jogo.venceu = 0;
 while (jogo.game_on == 1) {
     
     desenhar_tabuleiro(jogo);
-    
-    printf("\n--- Turno: %d ---\n", jogo.turno);
+
+    struct jogador *jogador_vez;
+    if(jogador_vez == &jogo.j1) {
+        printf("%s\n--- Turno: %d ---%s\n",cor_p2, jogo.turno, cor_reset);}
+    else {
+        printf("%s\n--- Turno: %d ---%s\n",cor_p1, jogo.turno, cor_reset);};
     
     // Define quem é o jogador da vez para facilitar os ifs abaixo
-    struct jogador *jogador_vez;
     if(jogo.jogador_atual == PLAYER_1) jogador_vez = &jogo.j1;
     else (jogador_vez = &jogo.j2);
 
-    printf("Vez de: %s\n", jogador_vez->nome);
+    if(jogador_vez == &jogo.j1) {
+        printf("%sVez de: %s%s\n",cor_p1, jogador_vez->nome, cor_reset);}
+    else {
+        printf("%sVez de: %s%s\n",cor_p2, jogador_vez->nome, cor_reset);}
     tipo_atual = jogador_vez->tipo;
 
     // obtem coluna
@@ -382,6 +405,11 @@ while (jogo.game_on == 1) {
     }
 }
 }
+else if(opcao_menu == 2) printf("%s Essa área ainda nao foi desbloqueada, jovem Jedi! Aguarde até a próxima atualizacao. :) \n%s",cor_atencao,cor_reset);
+else if (opcao_menu ==3){
+printf("%sMuito obrigado por jogar o nosso jogo! :)\n%s",cor_atencao,cor_reset);
+exit(0);
+}
 
-return 0;
+return 0; 
 }
