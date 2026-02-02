@@ -86,7 +86,7 @@ int mostar_menu_principal(){
         if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
             printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
             
-            while (getchar() != '\n'); // limpa o buffer, isso aqui é pre evitar algum tipoi de buffer por lixo no buffer
+            while (getchar() != '\n'); // limpa o buffer, isso aqui é pre evitar algum tipoi de erro por lixo no buffer
         
             printf("Pressione Enter para tentar novamente...");
             getchar();
@@ -217,18 +217,6 @@ int altura = -1; // Valor padrao de erro
 return altura; // Se chegou aqui a coluna ta cheia (-1)
 }
 
-/*
-void jogada_cpu(){
-    int coluna_rand;
-    result_valida = validar(coluna_rand); // Testa se existe 
-    if(validar(coluna_rand) != -1){
-
-    }
-}
-*/
-
-
-
 void inserir_ficha(struct partida *jogo, int linha, int coluna, int id_jogador){
     //como validar jogada já garante que tem como jogar, apenas gravamos na memomoria
 
@@ -303,125 +291,138 @@ void trocar_turno(struct partida *jogo) {
     jogo->turno++; //mais um turno é somado
 }
 
+int selecionar_modo(){
+int modo;
+    do {
+        limpar_tela(); 
+        printf("=== SELECIONE O MODO DE JOGO ===\n");
+        printf("1. Player vs Player\n");
+        printf("2. Player vs CPU\n");
+        printf("3. CPU vs CPU\n");
+        printf("Escolha: ");
+        if (scanf("%d", &modo) != 1 || modo < 1 || modo > 3) { //verifica se o que foi digitado é número ou está entre 1 e 3, senao estiver, retorna para selecao
+            printf("%sEntrada inválida!%s\n", cor_atencao, cor_reset);
+            while (getchar() != '\n');
+            getchar(); //congela a tela 
+        } else {
+            break;
+        }
+    } while (1);
+    return modo; //devolve o modo escolhido
+}
+
+// essa função controla o inicio da partida
+void iniciar_partida(struct partida *jogo){
+iniciar_tabuleiro(jogo); //inica o tabuleiro
+jogo->jogador_atual = PLAYER_1; //define o player 1 como jogador inicial
+jogo->turno = 1; //começa no 1 turno
+jogo->game_on = 1; // jogo esta acontecendo
+
+    //enquanto o jogo estiver em 1 o while vale
+    while (jogo->game_on) {
+        desenhar_tabuleiro(*jogo);
+        
+        struct jogador *jogador_vez = (jogo->jogador_atual == PLAYER_1) ? &jogo->j1 : &jogo->j2;
+        const char *cor_v = (jogo->jogador_atual == PLAYER_1) ? cor_p1 : cor_p2;
+
+        printf("\n%s--- Turno: %d ---%s\n", cor_atencao, jogo->turno, cor_reset);
+        printf("%sVez de: %s%s\n", cor_v, jogador_vez->nome, cor_reset);
+
+        int coluna; //recebe a coluna do player
+        if (jogador_vez->tipo == 0) { //player
+            printf("Escolha uma coluna (1-7): ");
+            scanf("%d", &coluna);
+            coluna--; // ajuste de indice partindo do 0
+        } else { // se nao quem joga é a cpu
+            printf("Computador pensando...\n");
+            if (jogo->modo_jogo == 3) for(int k=0; k<300000000; k++); // delay
+            coluna = rand() % COLUNAS;
+        }
+
+        int linha = validar(coluna, *jogo); //passa a coluna esclhida em validar
+
+        if (linha != -1) { // se estiver valido imprime e executa verificacoes 
+            inserir_ficha(jogo, linha, coluna, jogo->jogador_atual);
+            if (verificar_vitoria(*jogo, jogo->jogador_atual)) { 
+                desenhar_tabuleiro(*jogo);
+                printf("\n%s %s VENCEU O JOGO! %s\n", cor_v, jogador_vez->nome, cor_reset);
+                jogo->game_on = 0;
+            } else {
+                trocar_turno(jogo);
+            }
+        } else if (jogador_vez->tipo == 0) {
+            printf("\n%sJOGADA INVÁLIDA!%s Pressione Enter...", cor_atencao, cor_reset);
+            while (getchar() != '\n'); 
+            getchar();
+        }
+    }
+}
+
+//menu pos jogo para dar opcao ao usuario e tratamento de erro, usamos o mesmo no menu principa
+int pos_jogo(){
+int opcao;
+int resultado;
+    do{
+    printf("\n============================\n");
+    printf("1. Jogar Novamente\n");
+    printf("2. Voltar ao Menu Principal\n");
+    printf("3. Sair do Jogo\n");
+    printf("Escolha uma opção: ");
+
+        resultado = scanf("%d", &opcao); // captura o que o usuario digitou
+
+        if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
+            printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
+            
+            while (getchar() != '\n'); // limpa o buffer, isso aqui é pre evitar algum tipoi de erro por lixo no buffer
+        
+            printf("Pressione Enter para tentar novamente...");
+            getchar();
+        } else {
+            break; 
+        }
+
+    } while (1); // isso aqui só para no break
+
+    return opcao;
+}
+
 //==Main==//
 int main() {
-struct partida jogo;
+struct partida jogo; //recebe o estado
 int opcao_menu;
-int coluna_escolhida;
-int linha_encontrada; // Vai receber o retorno do validar
-int tipo_atual;
 
-// Semente para números aleatórios
-srand(time(NULL));
+    srand(time(NULL)); 
+    configurar_ambiente_win();
 
-configurar_ambiente_win();
+    while (1) {
+        opcao_menu = mostar_menu_principal();
 
-opcao_menu = mostar_menu_principal();
-
-if (opcao_menu == 1){ 
-// Seleção de Modo
-int resultado_modo;
-do {
-    limpar_tela();
-    printf("1. Player vs Player\n");
-    printf("2. Player vs CPU\n");
-    printf("3. CPU vs CPU\n");
-    printf("Escolha o modo: ");
-    resultado_modo = scanf("%d", &jogo.modo_jogo);
-
-    if (resultado_modo != 1 || jogo.modo_jogo < 1 || jogo.modo_jogo > 3) {
-        printf("%sEntrada inválida! Escolha um modo entre 1 e 3.%s\n", cor_atencao, cor_reset);
-        while (getchar() != '\n'); 
-        printf("Pressione Enter para tentar novamente...");
-        getchar();
-    } else {
-        break;
-    }
-} while (1);
-
-solicitar_nomes(&jogo.j1, &jogo.j2, jogo.modo_jogo);
-
-iniciar_tabuleiro(&jogo);
-jogo.jogador_atual = PLAYER_1;
-jogo.turno = 1;
-jogo.game_on = 1;
-jogo.venceu = 0;
-
-// Loop do jogo
-while (jogo.game_on == 1) {
-    
-    desenhar_tabuleiro(jogo);
-
-    struct jogador *jogador_vez;
-    // Define quem é o jogador da vez para facilitar os ifs abaixo
-    if(jogo.jogador_atual == PLAYER_1) jogador_vez = &jogo.j1;
-    else (jogador_vez = &jogo.j2);
-
-    if(jogador_vez == &jogo.j1) {
-        printf("%s\n--- Turno: %d ---%s\n",cor_p2, jogo.turno, cor_reset);}
-    else {
-        printf("%s\n--- Turno: %d ---%s\n",cor_p1, jogo.turno, cor_reset);};
-    
-    if(jogador_vez == &jogo.j1) {
-        printf("%sVez de: %s%s\n",cor_p1, jogador_vez->nome, cor_reset);}
-    else {
-        printf("%sVez de: %s%s\n",cor_p2, jogador_vez->nome, cor_reset);}
-    tipo_atual = jogador_vez->tipo;
-
-    // obtem coluna
-    if (tipo_atual == 0) { // Humano
-        printf("Escolha uma coluna (1 a 7): ");
-        scanf("%d", &coluna_escolhida);
-        coluna_escolhida = coluna_escolhida - 1; // Ajusta para 0-6
-    } else { // CPU
-        printf("Computador pensando...\n");
-        // Tenta gerar um numero aleatorio
-        coluna_escolhida = rand() % COLUNAS; 
-    }
-
-    // Aqui verificamos se a jogada é valida
-
-    linha_encontrada = validar(coluna_escolhida, jogo);
-
-    if (linha_encontrada != -1) {
-        // Caso validar retorne um valor valido:
-
-        inserir_ficha(&jogo, linha_encontrada, coluna_escolhida, jogo.jogador_atual);
-        
-        // verificando a vitoria e imprimindo mensagem informando quem ganhou 
-        if (verificar_vitoria(jogo, jogo.jogador_atual)) {
-             desenhar_tabuleiro(jogo);
-             printf("\n %s VENCEU O JOGO!\n", jogador_vez->nome);
-             jogo.game_on = 0;
-             jogo.venceu = 1;
-             getchar(); getchar();
+        if (opcao_menu == 1) { // se for 1 inicia o jogo
+            jogo.modo_jogo = selecionar_modo(); //seleciona modos
+            solicitar_nomes(&jogo.j1, &jogo.j2, jogo.modo_jogo); //solicita nomes
+            
+            int jogar_de_novo = 1; //jogar novamente recebe 1 para podermos jogar novamente
+            while (jogar_de_novo == 1) {
+                iniciar_partida(&jogo);
+                
+                int acao = pos_jogo(); //escolher acao pos jogo
+                if (acao == 1) jogar_de_novo = 1;
+                else if (acao == 3) exit(0);
+                else jogar_de_novo = 0; // se nao quiser jogar novamente recebe zero
+            }
+        } 
+        else if (opcao_menu == 2)  {
+            limpar_tela();
+            printf("%sCalma, jovem padawan! Ainda nao desenvolvemos essa parte, espere ate a proxima atualização :)%s\n", cor_atencao, cor_reset);
+            printf("Pressione Enter para voltar ao menu...");
+            while (getchar() != '\n'); 
+            getchar();
+        } 
+        else if (opcao_menu == 3) {
+            printf("Que a força esteja com você!\n");
             break;
-        }                   
-
-
-        trocar_turno(&jogo);
-        
-    } else {
-        // Se validar retornou -1(ou seja,erro):
-        if(tipo_atual == 0){ // Só avisa se for humano
-            printf("\nJOGADA INVALIDA! Coluna cheia ou inexistente.\n");
-            printf("Pressione Enter para tentar de novo...");
-            getchar(); getchar();
         }
-        // Se for CPU, ele só vai repetir o loop e tentar outro numero
     }
-    
-    // Pausa visual pro modo CPU vs CPU,ainda ta bem rapido entao talvez mude
-    if (jogo.modo_jogo == 3) {
-        for(int k=0; k<300000000; k++); 
-    }
-}
-}
-else if(opcao_menu == 2) printf("%s Essa área ainda nao foi desbloqueada, jovem Jedi! Aguarde até a próxima atualizacao. :) \n%s",cor_atencao,cor_reset);
-else if (opcao_menu ==3){
-printf("%sMuito obrigado por jogar o nosso jogo! :)\n%s",cor_atencao,cor_reset);
-exit(0);
-}
-
-return 0; 
+    return 0;
 }
