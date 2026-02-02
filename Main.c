@@ -151,8 +151,8 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
 }
 
 void exibir_cabecalho(){
-    printf("         LIGUE 4++  \n");
-    printf("  1   2   3   4   5   6   7  \n");
+    printf("         LIGUE 4++   \n");
+    printf("   1   2   3   4   5   6   7  \n");
 }
 
 void desenhar_tabuleiro(struct partida jogo){
@@ -320,12 +320,24 @@ opcao_menu = mostar_menu_principal();
 
 if (opcao_menu == 1){ 
 // Seleção de Modo
-limpar_tela();
-printf("1. Player vs Player\n");
-printf("2. Player vs CPU\n");
-printf("3. CPU vs CPU\n");
-printf("Escolha o modo: ");
-scanf("%d", &jogo.modo_jogo);
+int resultado_modo;
+do {
+    limpar_tela();
+    printf("1. Player vs Player\n");
+    printf("2. Player vs CPU\n");
+    printf("3. CPU vs CPU\n");
+    printf("Escolha o modo: ");
+    resultado_modo = scanf("%d", &jogo.modo_jogo);
+
+    if (resultado_modo != 1 || jogo.modo_jogo < 1 || jogo.modo_jogo > 3) {
+        printf("%sEntrada inválida! Escolha um modo entre 1 e 3.%s\n", cor_atencao, cor_reset);
+        while (getchar() != '\n'); 
+        printf("Pressione Enter para tentar novamente...");
+        getchar();
+    } else {
+        break;
+    }
+} while (1);
 
 solicitar_nomes(&jogo.j1, &jogo.j2, jogo.modo_jogo);
 
@@ -341,15 +353,15 @@ while (jogo.game_on == 1) {
     desenhar_tabuleiro(jogo);
 
     struct jogador *jogador_vez;
+    // Define quem é o jogador da vez para facilitar os ifs abaixo
+    if(jogo.jogador_atual == PLAYER_1) jogador_vez = &jogo.j1;
+    else (jogador_vez = &jogo.j2);
+
     if(jogador_vez == &jogo.j1) {
         printf("%s\n--- Turno: %d ---%s\n",cor_p2, jogo.turno, cor_reset);}
     else {
         printf("%s\n--- Turno: %d ---%s\n",cor_p1, jogo.turno, cor_reset);};
     
-    // Define quem é o jogador da vez para facilitar os ifs abaixo
-    if(jogo.jogador_atual == PLAYER_1) jogador_vez = &jogo.j1;
-    else (jogador_vez = &jogo.j2);
-
     if(jogador_vez == &jogo.j1) {
         printf("%sVez de: %s%s\n",cor_p1, jogador_vez->nome, cor_reset);}
     else {
@@ -384,7 +396,7 @@ while (jogo.game_on == 1) {
              jogo.venceu = 1;
              getchar(); getchar();
             break;
-        }                 
+        }                   
 
 
         trocar_turno(&jogo);
