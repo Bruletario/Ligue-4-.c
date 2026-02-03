@@ -127,18 +127,21 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
     if (modo == 1) {
         p1->tipo = 0; // 0 = humano
         printf("Digite o nome do Jogador 1: ");
-            scanf(" %[^\n]", p1->nome); // %[^\n] define que o scanf vai ler tudo até achar um enter
+            fgets(p1->nome, 50, stdin);
+            p1->nome[strcspn(p1->nome, "\n")] = 0; //isso aqui e pra remover o enter no final da string
 
         p2->tipo = 0; //humano
         printf("Digite o nome do Jogador 2: ");
-        scanf(" %[^\n]", p2->nome);
+        fgets(p2->nome, 50, stdin);
+        p2->nome[strcspn(p2->nome, "\n")] = 0; //isso aqui e pra remover o enter no final da string
     }
     
     // pvc
     else if (modo == 2) {
         p1->tipo = 0; //humano
         printf("Digite o nome do Jogador 1: ");
-        scanf(" %[^\n]", p1->nome);
+        fgets(p1->nome, 50, stdin);
+        p1->nome[strcspn(p1->nome, "\n")] = 0; 
 
         p2->tipo = 1; // 1 = CPU
         //usamos strcpy para definir o nome fixo
@@ -329,6 +332,7 @@ int modo;
             while (getchar() != '\n');
             getchar(); //congela a tela 
         } else {
+            while (getchar() != '\n'); // estava pulando a vez do player colocar o nome pq etava ficando o enter na memoria, esse getchar vai  limpar o buffer e corrigir isso.
             break;
         }
     } while (1);
