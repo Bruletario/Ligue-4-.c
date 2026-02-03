@@ -1,7 +1,10 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
 #include <time.h> // Necessário para o rand() funcionar bem
+#include <unistd.h> //biblioteca para usar sleep linux
+#include <windows.h> //biblioteca para usar sleep linux
 
 //constantes globais como #define para substituicao literal do valor
 
@@ -62,10 +65,23 @@ void limpar_tela(){
     #endif
 }
 
+void delay(){  // definição para tratar pausa visual tanto para win quanto para linux
+    #ifdef _WIN32
+    #define SLEEP_MS(ms) Sleep(ms)
+    #else
+    #define SLEEP_MS(ms) usleep((ms) * 1000)
+    #endif
+}
+
 void configurar_ambiente_win(){ //garantir que nao vai ter problerma do bloco no windows
     #ifdef _WIN32
     system("chcp 65001");
     #endif
+}
+
+
+void delay_visual(int ms){ // garantir que não tenha problema na pausa visual
+SLEEP_MS(ms);
 }
 
 //vai guardar o que o usuario escolheu
@@ -291,6 +307,12 @@ void trocar_turno(struct partida *jogo) {
     jogo->turno++; //mais um turno é somado
 }
 
+void verificar_empate(struct partida *jogo){
+    if (jogo->turno > LINHAS * COLUNAS) {
+    printf("EMPATE! O tabuleiro está cheio.\n");
+    jogo->game_on = 0;//colocar no começo do loop while
+}}
+
 int selecionar_modo(){
 int modo;
     do {
@@ -333,10 +355,10 @@ jogo->game_on = 1; // jogo esta acontecendo
             printf("Escolha uma coluna (1-7): ");
             scanf("%d", &coluna);
             coluna--; // ajuste de indice partindo do 0
-        } else { // se nao quem joga é a cpu
+        } else { // se nao, quem joga é a cpu
             printf("Computador pensando...\n");
-            if (jogo->modo_jogo == 3) for(int k=0; k<300000000; k++); // delay
-            coluna = rand() % COLUNAS;
+            delay_visual(1500); // Pausa de 1,5 segundos para simular o pensamento da CPU
+            coluna = rand() % COLUNAS; // tenta gerar um numero aleatorio
         }
 
         int linha = validar(coluna, *jogo); //passa a coluna esclhida em validar
