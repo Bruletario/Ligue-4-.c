@@ -3,6 +3,15 @@
 #include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
 #include <time.h> // Necessário para o rand() funcionar bem
 
+// definição para tratar pausa visual tanto para win quanto para linux
+#ifdef _WIN32
+    #include <windows.h>
+    #define SLEEP_MS(ms) Sleep(ms)
+#else
+    #include <unistd.h>
+    #define SLEEP_MS(ms) usleep((ms) * 1000)
+ #endif
+
 //constantes globais como #define para substituicao literal do valor
 
 #define LINHAS 6 //linhas da matriz
@@ -62,15 +71,6 @@ void limpar_tela(){
     #endif
 }
 
-void delay(){  // definição para tratar pausa visual tanto para win quanto para linux
-    #ifdef _WIN32
-    #include <windows.h>
-    #define SLEEP_MS(ms) Sleep(ms)
-    #else
-    #include <unistd.h>
-    #define SLEEP_MS(ms) usleep((ms) * 1000)
-    #endif
-}
 
 void configurar_ambiente_win(){ //garantir que nao vai ter problerma do bloco no windows
     #ifdef _WIN32
