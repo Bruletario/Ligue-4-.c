@@ -1,10 +1,7 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
 #include <time.h> // Necessário para o rand() funcionar bem
-#include <unistd.h> //biblioteca para usar sleep linux
-#include <windows.h> //biblioteca para usar sleep linux
 
 //constantes globais como #define para substituicao literal do valor
 
@@ -67,8 +64,10 @@ void limpar_tela(){
 
 void delay(){  // definição para tratar pausa visual tanto para win quanto para linux
     #ifdef _WIN32
+    #include <windows.h>
     #define SLEEP_MS(ms) Sleep(ms)
     #else
+    #include <unistd.h>
     #define SLEEP_MS(ms) usleep((ms) * 1000)
     #endif
 }
@@ -97,7 +96,7 @@ int mostar_menu_principal(){
         printf("3. Sair\n");
         printf("Escolha uma opção: ");
 
-        resultado = scanf("%d", &opcao); // captura o que o usuario digitou
+            resultado = scanf("%d", &opcao); // captura o que o usuario digitou
 
         if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
             printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
@@ -108,7 +107,7 @@ int mostar_menu_principal(){
             getchar();
         } else {
             break; 
-        }
+    }
 
     } while (1); // isso aqui só para no break
 
@@ -128,7 +127,7 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
     if (modo == 1) {
         p1->tipo = 0; // 0 = humano
         printf("Digite o nome do Jogador 1: ");
-        scanf(" %[^\n]", p1->nome); // %[^\n] define que o scanf vai ler tudo até achar um enter
+            scanf(" %[^\n]", p1->nome); // %[^\n] define que o scanf vai ler tudo até achar um enter
 
         p2->tipo = 0; //humano
         printf("Digite o nome do Jogador 2: ");
@@ -146,12 +145,13 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
         strcpy(p2->nome, "Computador"); 
         
         printf("\nSeu adversario sera o: %s\n", p2->nome);
-        printf("Pressione Enter para continuar...");
-        getchar(); getchar(); // Pausa 
+            printf("Pressione Enter para continuar...");
+            getchar(); getchar(); // Pausa 
     }
 
     // cvc
     else if (modo == 3) {
+        
         p1->tipo = 1; //cou
         strcpy(p1->nome, "PC Azul");
 
@@ -168,6 +168,7 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
 
 void exibir_cabecalho(){
     printf("         LIGUE 4++   \n");
+    
     printf("   1   2   3   4   5   6   7  \n");
 }
 
@@ -191,9 +192,9 @@ void desenhar_tabuleiro(struct partida jogo){
                 
                 printf(" %s%s%s |", cor_p1, ficha, cor_reset); //verifica se a coordenada é 1, se for troca para o quadrado e pinta de azul
             } 
-            else if(valor == PLAYER_2) {
+                else if(valor == PLAYER_2) {
                 printf(" %s%s%s |", cor_p2, ficha, cor_reset); //verifica se a coordenada é 2, se for troca para o quadrado e pinta de vermelho
-            }
+                }
         }
         printf("\n"); 
         
@@ -210,13 +211,15 @@ void iniciar_tabuleiro(struct partida *jogo){
 
         jogo->matriz[i][j].ocupante = VAZIO; // altera o endereço de memoria matriz e preenche ela com 0 (vazio)
         jogo->matriz[i][j].tipo_ficha = FICHA_COMUM; // define que as fichas são padrão
-        strcpy(jogo->matriz[i][j].simbolo, " "); //define os simbolos da matriz para "nada"
+            strcpy(jogo->matriz[i][j].simbolo, " "); //define os simbolos da matriz para "nada"
 
          }
     }       
 }
 
 int validar(int coluna, struct partida jogo){
+
+    
 int altura = -1; // Valor padrao de erro
 
     if((coluna < 0) || (coluna > 6)){ // Verifica se a coluna existe 
@@ -227,8 +230,7 @@ int altura = -1; // Valor padrao de erro
     if(jogo.matriz[i][coluna].ocupante == VAZIO){
     altura = i; // Achou uma linha vazia
     return altura; // Retorna a linha encontrada
-    }
-}
+    }}
 
 return altura; // Se chegou aqui a coluna ta cheia (-1)
 }
@@ -248,6 +250,7 @@ int cont;
 
 // vrifica se tem 4 fichas na HORIZONTAL
 for (int i = 0; i < LINHAS; i++) {
+    
     cont = 0;
     for (int j = 0; j < COLUNAS; j++) {
         if (jogo.matriz[i][j].ocupante == jogador) {
@@ -256,8 +259,7 @@ for (int i = 0; i < LINHAS; i++) {
         } else {
             cont = 0;
         }
-    }
-}
+    }}
 
 // Verifica VERTICAL 
 for (int j = 0; j < COLUNAS; j++) {
@@ -279,8 +281,7 @@ for (int i = 0; i < LINHAS - 3; i++) {
             jogo.matriz[i+1][j+1].ocupante == jogador &&
             jogo.matriz[i+2][j+2].ocupante == jogador &&
             jogo.matriz[i+3][j+3].ocupante == jogador) {
-            return 1;
-        }
+            return 1;}
     }
 }
 
@@ -291,21 +292,22 @@ for (int i = 3; i < LINHAS; i++) {
             jogo.matriz[i-1][j+1].ocupante == jogador &&
             jogo.matriz[i-2][j+2].ocupante == jogador &&
             jogo.matriz[i-3][j+3].ocupante == jogador) {
-            return 1;
-        }
+            return 1;}
     }
 }
 
 
+    
 return 0;// ninguém venceu
 }
 
 void trocar_turno(struct partida *jogo) {
     if (jogo->jogador_atual == PLAYER_1) { //se o jogador atual for o player 1, muda para o dois
-        jogo->jogador_atual = PLAYER_2;
+            jogo->jogador_atual = PLAYER_2;
     } else {jogo->jogador_atual = PLAYER_1;} // se nao, joga o player 1
-    jogo->turno++; //mais um turno é somado
+        jogo->turno++; //mais um turno é somado
 }
+
 
 void verificar_empate(struct partida *jogo){
     if (jogo->turno > LINHAS * COLUNAS) {
@@ -321,7 +323,7 @@ int modo;
         printf("1. Player vs Player\n");
         printf("2. Player vs CPU\n");
         printf("3. CPU vs CPU\n");
-        printf("Escolha: ");
+    printf("Escolha: ");
         if (scanf("%d", &modo) != 1 || modo < 1 || modo > 3) { //verifica se o que foi digitado é número ou está entre 1 e 3, senao estiver, retorna para selecao
             printf("%sEntrada inválida!%s\n", cor_atencao, cor_reset);
             while (getchar() != '\n');
@@ -431,7 +433,7 @@ int opcao_menu;
                 int acao = pos_jogo(); //escolher acao pos jogo
                 if (acao == 1) jogar_de_novo = 1;
                 else if (acao == 3) exit(0);
-                else jogar_de_novo = 0; // se nao quiser jogar novamente recebe zero
+                    else jogar_de_novo = 0; // se nao quiser jogar novamente recebe zero
             }
         } 
         else if (opcao_menu == 2)  {
@@ -439,8 +441,8 @@ int opcao_menu;
             printf("%sCalma, jovem padawan! Ainda nao desenvolvemos essa parte, espere ate a proxima atualização :)%s\n", cor_atencao, cor_reset);
             printf("Pressione Enter para voltar ao menu...");
             while (getchar() != '\n'); 
-            getchar();
-        } 
+            getchar();} 
+            
         else if (opcao_menu == 3) {
             printf("Que a força esteja com você!\n");
             break;
