@@ -20,6 +20,8 @@
 #define PLAYER_1 1 //valor do p1
 #define PLAYER_2 2 //valor do p2
 #define FICHA_COMUM 1 //ficha normal
+#define FICHA_EXPLOSIVA 2 // ficha explosiva
+#define FICHA_PORTAL 3 // ficha portal
 #define PVP 1 //player x player
 #define PVC 2 //player x cpu
 #define CVC 3// cpu x cpu
@@ -40,6 +42,9 @@ int tipo; // se e humano ou cpu
 int jogadas; //quantas jogadas ele fez na partida atual
 int vitorias; //quantas vitorias no total
 char cor_code[10]; //Codigo da cor
+int fichas_comuns; //p usar no inventario
+int fichas_explosivas;//p usar no inventario
+int fichas_portal;//p usar no inventario
 };
 
 struct partida{
@@ -60,7 +65,9 @@ const char cor_reset[] = "\033[0m"; //padrao
 const char cor_p1[] = "\033[1;34m"; // Azul
 const char cor_p2[] = "\033[1;31m"; // Vermelho
 const char cor_atencao[] = "\x1b[33m"; //amarelo em hexadecimal pq nao achei em ascii
-const char ficha[] = "█"; // ficha do jogo
+const char ficha[] = "█"; // ficha do normal
+const char ficha_exp[] = "⛞"; // Ficha Explosiva
+const char ficha_por[] = "U"; // Ficha Portal
 const char tabuleiro_vazio[] = " ";
 
 void limpar_tela(){
@@ -121,6 +128,7 @@ void solicitar_nomes(struct jogador *p1, struct jogador *p2, int modo) {
 //ids dos players, ponteiros
 p1->id = 1; 
 p2->id = 2;
+
 limpar_tela(); 
 printf("=== CONFIGURACAO DOS JOGADORES ===\n\n");
 
@@ -156,7 +164,7 @@ else if (modo == 2) {
     
     printf("\nSeu adversario sera o: %s\n", p2->nome);
         printf("Pressione Enter para continuar...");
-        getchar(); getchar(); // Pausa 
+        getchar(); // Pausa 
 }
 
 // cvc
@@ -172,14 +180,14 @@ else if (modo == 3) {
     printf("Partida: %s vs %s\n", p1->nome, p2->nome);
 
     printf("Pressione Enter para iniciar a simulacao...");
-    getchar(); getchar(); //pausa
+    getchar(); //pausa
 }
 }
 
 void exibir_cabecalho(){
 printf(" LIGUE 4++ \n");
 
-printf("   1   2   3   4   5   6   7  \n");
+printf("   1   2   3   4   5   6   7   \n");
 }
 
 void desenhar_tabuleiro(struct partida jogo){
@@ -194,21 +202,26 @@ for(int i=0; i<LINHAS; i++){
     
     for(int j=0; j<COLUNAS; j++){
         int valor = jogo.matriz[i][j].ocupante; // coordenada da jogada
+         int tipo = jogo.matriz[i][j].tipo_ficha;  // tipo da fihca
         
         if(valor == VAZIO){
             printf(" %s |", tabuleiro_vazio); //verifica se a coordenada é 0, se for deixa em branco
         } 
-        else if(valor == PLAYER_1){
-            
-            printf(" %s%s%s |", cor_p1, ficha, cor_reset); //verifica se a coordenada é 1, se for troca para o quadrado e pinta de azul
-        } 
-            else if(valor == PLAYER_2) {
-            printf(" %s%s%s |", cor_p2, ficha, cor_reset); //verifica se a coordenada é 2, se for troca para o quadrado e pinta de vermelho
-            }
+        else{
+         // define a cor com base no dono da ficha 
+            const char *cor = (valor == PLAYER_1) ? cor_p1 : cor_p2; 
+            const char *simbolo_peca;
+
+            // define tipo da ficha
+            if (tipo == FICHA_EXPLOSIVA) simbolo_peca = ficha_exp;
+            else if (tipo == FICHA_PORTAL) simbolo_peca = ficha_por;
+            else simbolo_peca = ficha;
+
+            // imprime a ficha
+            printf(" %s%s%s |", cor, simbolo_peca, cor_reset);
+        }
     }
-    printf("\n"); 
-    
-    printf("+---+---+---+---+---+---+---+\n"); 
+    printf("\n+---+---+---+---+---+---+---+\n"); 
 }
 }
 
@@ -243,11 +256,11 @@ return altura; // Retorna a linha encontrada
 return altura; // Se chegou aqui a coluna ta cheia (-1)
 }
 
-void inserir_ficha(struct partida *jogo, int linha, int coluna, int id_jogador){
+void inserir_ficha(struct partida *jogo, int linha, int coluna, int id_jogador, int tipo_ficha){
 //como validar jogada já garante que tem como jogar, apenas gravamos na memomoria
 
 jogo->matriz[linha][coluna].ocupante = id_jogador; //substitui o ocupante para o player que jogou
-jogo->matriz[linha][coluna].tipo_ficha = FICHA_COMUM; //substitui para ficha comum
+jogo->matriz[linha][coluna].tipo_ficha = tipo_ficha; //substitui para ficha escolhida
 strcpy(jogo->matriz[linha][coluna].simbolo, ficha); //substitui o simbolo para o do player
 }
 
@@ -333,12 +346,30 @@ break;
 return modo; //devolve o modo escolhido
 }
 
+int verificar_empate(struct partida *jogo){
+    //soma das fichas
+    int valor_j1 = jogo->j1.fichas_comuns + jogo->j1.fichas_explosivas + jogo->j1.fichas_portal;
+    int valor_j2 = jogo->j2.fichas_comuns + jogo->j2.fichas_explosivas + jogo->j2.fichas_portal;
+
+    //verifica se as fichas acabaram ou se o acabou o n de jogadas possiveis
+    if((valor_j1 ==0)||(valor_j2 ==0)||(jogo->turno == LINHAS*COLUNAS)){
+        desenhar_tabuleiro(*jogo);
+        jogo->game_on = 0; //encerra o loop
+        return 1; //true p empate
+    }
+    return 0; // false, continua o jogo
+}
+
 // essa função controla o inicio da partida
 void iniciar_partida(struct partida *jogo){
 iniciar_tabuleiro(jogo); //inica o tabuleiro
 jogo->jogador_atual = PLAYER_1; //define o player 1 como jogador inicial
 jogo->turno = 1; //começa no 1 turno
 jogo->game_on = 1; // jogo esta acontecendo
+
+// Inicializa fichas
+jogo->j1.fichas_comuns = 21; jogo->j1.fichas_explosivas = 0; jogo->j1.fichas_portal = 0; //  acessa pela struct jogo
+jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 0; jogo->j2.fichas_portal = 0; 
 
 //enquanto o jogo estiver em 1 o while vale
 while (jogo->game_on) {
@@ -350,8 +381,41 @@ while (jogo->game_on) {
     printf("\n%s--- Turno: %d ---%s\n", cor_atencao, jogo->turno, cor_reset);
     printf("%sVez de: %s%s\n", cor_v, jogador_vez->nome, cor_reset);
 
-    int coluna; //recebe a coluna do player
+    int coluna = -1; //recebe a coluna do player
+    int tipo_f = FICHA_COMUM; // define o tipo padrão antes da escolha
+
     if (jogador_vez->tipo == 0) { //player
+        int escolha_valida = 0;
+        
+        // Loop para seleção do tipo de ficha
+        while (!escolha_valida) {
+            printf("Inventário: [C] Comum:%d | [E] Explosiva:%d | [P] Portal:%d\n", 
+                    jogador_vez->fichas_comuns, jogador_vez->fichas_explosivas, jogador_vez->fichas_portal);
+            printf("Escolha o tipo de ficha: ");
+            char input;
+            if (scanf(" %c", &input) != 1) {
+                limpar_buffer();
+                continue;
+            }
+            limpar_buffer();
+            if (input == 'c' || input == 'C') tipo_f = FICHA_COMUM;
+            else if (input == 'e' || input == 'E') tipo_f = FICHA_EXPLOSIVA;
+            else if (input == 'p' || input == 'P') tipo_f = FICHA_PORTAL;
+            else {
+                printf("%sOpção inválida!%s\n", cor_atencao, cor_reset);
+                continue;
+            }
+
+            // Valida se o jogador possui a ficha no inventário
+            if ((tipo_f == FICHA_COMUM && jogador_vez->fichas_comuns > 0) ||
+                (tipo_f == FICHA_EXPLOSIVA && jogador_vez->fichas_explosivas > 0) ||
+                (tipo_f == FICHA_PORTAL && jogador_vez->fichas_portal > 0)) {
+                escolha_valida = 1;
+            } else {
+                printf("%sVocê não tem essa ficha!%s\n", cor_atencao, cor_reset);
+            }
+        }
+
         printf("Escolha uma coluna (1-7): ");
         if (scanf("%d", &coluna) != 1) { //tratamento de erro, se nao for itneiro cai nesse caos
             limpar_buffer(); 
@@ -363,25 +427,46 @@ while (jogo->game_on) {
         printf("Computador pensando...\n");
         delay_visual(1500); // Pausa de 1,5 segundos para simular o pensamento da CPU
             do coluna = rand() % COLUNAS; // tenta gerar um numero aleatorio
-                while (validar(coluna, *jogo) == -1); // se a jogada n for valida ele tenta novamente [essa é uma correcao de erro, o bot tava perdendo a vez quando a jogada era invalida]
+                while (validar(coluna, *jogo) == -1); // se a jogada n for valida ele tenta novamente
+        tipo_f = FICHA_COMUM; // CPU por enquanto só usa comum
     }
 
     int linha = validar(coluna, *jogo); //passa a coluna esclhida em validar
 
     if (linha != -1) { // se estiver valido imprime e executa verificacoes 
-        inserir_ficha(jogo, linha, coluna, jogo->jogador_atual);
+        // Agora passamos o tipo_f escolhido para a função
+        inserir_ficha(jogo, linha, coluna, jogo->jogador_atual, tipo_f);
+        
+        // Deduz a ficha do inventário do jogador atual
+        if(tipo_f == FICHA_COMUM) jogador_vez->fichas_comuns--;
+        else if(tipo_f == FICHA_EXPLOSIVA) jogador_vez->fichas_explosivas--;
+        else if(tipo_f == FICHA_PORTAL) jogador_vez->fichas_portal--;
+
         if (verificar_vitoria(*jogo, jogo->jogador_atual)){ 
             desenhar_tabuleiro(*jogo);
             printf("\n%s %s VENCEU O JOGO! %s\n", cor_v, jogador_vez->nome, cor_reset);
-            jogo->game_on = 0;} 
-        else if (jogo->turno == (LINHAS * COLUNAS)) { //verificar empate
-            desenhar_tabuleiro(*jogo);
-            printf("\nEMPATE! O tabuleiro está completamente cheio.%s\n", cor_reset);
-            jogo->game_on = 0;}
-
-        else {trocar_turno(jogo);}
+            jogo->game_on = 0;
+        } 
+        else if (verificar_empate(jogo)){
+            if (jogo->turno == (LINHAS * COLUNAS)) {
+            printf("\n%sEMPATE! O tabuleiro está completamente cheio.%s\n", cor_atencao, cor_reset);
+            } else {
+            printf("\n%sEMPATE! As fichas de um dos jogadores acabaram.%s\n", cor_atencao, cor_reset);
+             }
+        }
+        else {
+            trocar_turno(jogo);
+            
+            //  a cada 5 rodadas adiciona as fihcas
+            if(jogo->turno > 1 && (jogo->turno - 1) % 10 == 0) {
+                jogo->j1.fichas_explosivas++; jogo->j1.fichas_portal++;
+                jogo->j2.fichas_explosivas++; jogo->j2.fichas_portal++;
+                printf("\n%s[BÔNUS] Fichas especiais recebidas!%s\n", cor_atencao, cor_reset);
+                delay_visual(1000);
+            }
+        }
     }
-        else if (jogador_vez->tipo == 0) {
+    else if (jogador_vez->tipo == 0) {
         printf("\n%sJOGADA INVÁLIDA!%s Pressione Enter...", cor_atencao, cor_reset);
         limpar_buffer(); 
         getchar();
@@ -435,7 +520,7 @@ while (1) {
         
         int jogar_de_novo = 1; //jogar novamente recebe 1 para podermos jogar novamente
         while (jogar_de_novo == 1) {
-            iniciar_partida(&jogo);
+            iniciar_partida(&jogo); 
             
             int acao = pos_jogo(); //escolher acao pos jogo
             if (acao == 1) jogar_de_novo = 1;
