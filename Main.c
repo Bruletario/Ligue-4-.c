@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
@@ -360,7 +361,77 @@ int verificar_empate(struct partida *jogo){
     return 0; // false, continua o jogo
 }
 
+void aplicar_gravidade(struct partida *jogo, int coluna) {
+    
+    for (int i = LINHAS - 1; i > 0; i--) { //de baixo pra cima
+        if (jogo->matriz[i][coluna].ocupante == VAZIO) { //se a cel atual estiver vazia Procura a primeira ficha acima dela para puxar para baixo
+            for (int j = i - 1; j >= 0; j--) {
+                if (jogo->matriz[j][coluna].ocupante != VAZIO) {
+                    //copia os dados da ficha de cima para a posicaoo atual
+                    jogo->matriz[i][coluna] = jogo->matriz[j][coluna];
+                    // limpa a posição antiga la de cima
+                    jogo->matriz[j][coluna].ocupante = VAZIO;
+                    jogo->matriz[j][coluna].tipo_ficha = VAZIO;
+                    strcpy(jogo->matriz[j][coluna].simbolo, " ");
+                    break; // Sai do loop menor
+                }
+            }
+        }
+    }
+}
+
+//funcao teste para tentar animar o portal, nao esta funcionando muito bem
+void animar_portal(struct partida *jogo, int linha, int coluna) {
+    //coloca o portal na matriz
+    jogo->matriz[linha][coluna].ocupante = jogo->jogador_atual; 
+    jogo->matriz[linha][coluna].tipo_ficha = FICHA_PORTAL;
+
+    //mostra p o player
+    desenhar_tabuleiro(*jogo);
+    printf("\n%s[PORTAL] Ativando portal na coluna %d...%s\n", cor_atencao, coluna + 1, cor_reset);
+    
+    //pausa visual
+    delay_visual(1200);
+
+    //efeito de engolir que essa ficha tem
+    jogo->matriz[linha][coluna].ocupante = VAZIO;
+    jogo->matriz[linha][coluna].tipo_ficha = VAZIO;
+}
+
+int usar_ficha_portal(struct partida *jogo, int coluna) {
+    if (coluna < 0 || coluna >= COLUNAS) return 0;
+
+    int linha_visual = validar(coluna, *jogo); //verifica onde o portal vai aparecer 
+    
+    if (linha_visual == -1) linha_visual = 0; // se a coluna tiver cheia, aparece no topo
+
+    //adicionei a logica de animacao
+    animar_portal(jogo, linha_visual, coluna);
+
+    //percorre pra remover a ficha se encontrar algo que não seja vazio
+    for (int i = 0; i < LINHAS; i++) { 
+        if (jogo->matriz[i][coluna].ocupante != VAZIO && i != linha_visual) {
+            jogo->matriz[i][coluna].ocupante = VAZIO;
+            jogo->matriz[i][coluna].tipo_ficha = VAZIO;
+            strcpy(jogo->matriz[i][coluna].simbolo, " ");
+
+            printf("%s>>> O Portal absorveu a ficha abaixo! <<<%s\n", cor_atencao, cor_reset);
+            
+            // organiza com a gravidade
+            aplicar_gravidade(jogo, coluna);
+            delay_visual(800);
+            return 1;
+        }
+    }
+
+    // se a coluna estava vazia abaixo do portal
+    printf("%s>>> O Portal desapareceu no vazio! <<<%s\n", cor_atencao, cor_reset);
+    delay_visual(1200);
+    return 1;
+}
+
 // essa função controla o inicio da partida
+
 void iniciar_partida(struct partida *jogo){
 iniciar_tabuleiro(jogo); //inica o tabuleiro
 jogo->jogador_atual = PLAYER_1; //define o player 1 como jogador inicial
@@ -373,6 +444,7 @@ jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 0; jogo->j2.fichas_por
 
 //enquanto o jogo estiver em 1 o while vale
 while (jogo->game_on) {
+
     desenhar_tabuleiro(*jogo);
     
     struct jogador *jogador_vez = (jogo->jogador_atual == PLAYER_1) ? &jogo->j1 : &jogo->j2;
@@ -383,6 +455,7 @@ while (jogo->game_on) {
 
     int coluna = -1; //recebe a coluna do player
     int tipo_f = FICHA_COMUM; // define o tipo padrão antes da escolha
+    int jogada_realizada = 0; //verifica se a jogada foi feita
 
     if (jogador_vez->tipo == 0) { //player
         int escolha_valida = 0;
@@ -431,47 +504,55 @@ while (jogo->game_on) {
         tipo_f = FICHA_COMUM; // CPU por enquanto só usa comum
     }
 
-    int linha = validar(coluna, *jogo); //passa a coluna esclhida em validar
-
-    if (linha != -1) { // se estiver valido imprime e executa verificacoes 
-        // Agora passamos o tipo_f escolhido para a função
-        inserir_ficha(jogo, linha, coluna, jogo->jogador_atual, tipo_f);
-        
-        // Deduz a ficha do inventário do jogador atual
-        if(tipo_f == FICHA_COMUM) jogador_vez->fichas_comuns--;
-        else if(tipo_f == FICHA_EXPLOSIVA) jogador_vez->fichas_explosivas--;
-        else if(tipo_f == FICHA_PORTAL) jogador_vez->fichas_portal--;
-
-        if (verificar_vitoria(*jogo, jogo->jogador_atual)){ 
-            desenhar_tabuleiro(*jogo);
-            printf("\n%s %s VENCEU O JOGO! %s\n", cor_v, jogador_vez->nome, cor_reset);
-            jogo->game_on = 0;
+    if (tipo_f == FICHA_PORTAL) { 
+            jogada_realizada = usar_ficha_portal(jogo, coluna); // se for a portal, utiliza ela
+            if (jogada_realizada) { 
+                jogador_vez->fichas_portal--; //remove do inventario
+            }
         } 
-        else if (verificar_empate(jogo)){
-            if (jogo->turno == (LINHAS * COLUNAS)) {
-            printf("\n%sEMPATE! O tabuleiro está completamente cheio.%s\n", cor_atencao, cor_reset);
-            } else {
-            printf("\n%sEMPATE! As fichas de um dos jogadores acabaram.%s\n", cor_atencao, cor_reset);
-             }
-        }
         else {
-            trocar_turno(jogo);
-            
-            //  a cada 5 rodadas adiciona as fihcas
-            if(jogo->turno > 1 && (jogo->turno - 1) % 10 == 0) {
-                jogo->j1.fichas_explosivas++; jogo->j1.fichas_portal++;
-                jogo->j2.fichas_explosivas++; jogo->j2.fichas_portal++;
-                printf("\n%s[BÔNUS] Fichas especiais recebidas!%s\n", cor_atencao, cor_reset);
+            int linha = validar(coluna, *jogo); // se nao, verifica se é uma jogada valida
+            if (linha != -1) { // se for valida, faz a jogada se for comum ou explosiva
+                inserir_ficha(jogo, linha, coluna, jogo->jogador_atual, tipo_f);
+                if (tipo_f == FICHA_COMUM) jogador_vez->fichas_comuns--;
+                else if (tipo_f == FICHA_EXPLOSIVA) jogador_vez->fichas_explosivas--;
+                jogada_realizada = 1;
+            } else {
+                printf("\n%sCOLUNA CHEIA!%s\n", cor_atencao, cor_reset); // se nao, jogada invalida
                 delay_visual(1000);
             }
         }
+
+if (jogada_realizada) {
+
+            // se for portal checamos vitória dos dois 
+            // Se foi comum checamos apenas para o atual
+            //tambem verifica empate e apos 10 turnos da fichas bonus
+            int venceu = (tipo_f == FICHA_PORTAL) ? 
+                         (verificar_vitoria(*jogo, PLAYER_1) || verificar_vitoria(*jogo, PLAYER_2)) :
+                         verificar_vitoria(*jogo, jogo->jogador_atual);
+
+            if (venceu) {
+                desenhar_tabuleiro(*jogo);
+                printf("\n%s VITÓRIA! %s\n", cor_v, cor_reset);
+                jogo->game_on = 0;
+            } 
+            else if (verificar_empate(jogo)) {
+                printf("\nEMPATE!\n");
+                jogo->game_on = 0;
+            } 
+            else {
+                trocar_turno(jogo);
+                //fihcas bonus
+                if (jogo->turno > 1 && (jogo->turno - 1) % 10 == 0) {
+                    jogo->j1.fichas_explosivas++; jogo->j1.fichas_portal++;
+                    jogo->j2.fichas_explosivas++; jogo->j2.fichas_portal++;
+                    printf("\n%s[BÔNUS] Fichas especiais recebidas!%s\n", cor_atencao, cor_reset);
+                    delay_visual(1000);
+                }
+            }
+        }
     }
-    else if (jogador_vez->tipo == 0) {
-        printf("\n%sJOGADA INVÁLIDA!%s Pressione Enter...", cor_atencao, cor_reset);
-        limpar_buffer(); 
-        getchar();
-    }
-}
 }
 
 //menu pos jogo para dar opcao ao usuario e tratamento de erro, usamos o mesmo no menu principa
