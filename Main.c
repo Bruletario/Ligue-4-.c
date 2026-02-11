@@ -66,8 +66,8 @@ const char cor_p1[] = "\033[1;34m"; // Azul
 const char cor_p2[] = "\033[1;31m"; // Vermelho
 const char cor_atencao[] = "\x1b[33m"; //amarelo em hexadecimal pq nao achei em ascii
 const char ficha[] = "█"; // ficha do normal
-const char ficha_exp[] = "⛞"; // Ficha Explosiva
-const char ficha_por[] = "U"; // Ficha Portal
+const char ficha_exp[] = "⛞"; //ficha Explosiva
+const char ficha_por[] = "U"; // ficha Portal
 const char tabuleiro_vazio[] = " ";
 
 void limpar_tela(){
@@ -80,6 +80,13 @@ system("clear");
 
 void limpar_buffer(){
 while((getchar()) != '\n'); // função de limpeza de buffer, adicionada para tentar resolver o problema de overflow do buffer na hora de ler o nome dos players
+}
+
+void apagar_linhas(int qtd_linhas) {
+    for (int i = 0; i < qtd_linhas; i++) {
+        printf("\033[A"); //vai move o cursor pra cima
+        printf("\033[2K"); //vai limpa a linha inteira
+    }
 }
 
 void configurar_ambiente_win(){ //garantir que nao vai ter problerma do bloco no windows
@@ -96,6 +103,7 @@ SLEEP_MS(ms);
 int mostar_menu_principal(){
 int opcao;
 int resultado;
+char buffer[100]; // buffer para fgets
 
 do {
     limpar_tela(); //garante o terminal limpo
@@ -105,15 +113,15 @@ do {
     printf("3. Sair\n");
     printf("Escolha uma opção: ");
 
-        resultado = scanf("%d", &opcao); // captura o que o usuario digitou
+        fgets(buffer, 100, stdin); // le a linha toda
+        resultado = sscanf(buffer, "%d", &opcao); // procura o inteiro no buffer 
 
     if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
-        printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
-        
-        limpar_buffer(); // limpa o buffer, isso aqui é pre evitar algum tipoi de erro por lixo no buffer
+        printf("%sCalma jovem padawan! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
     
         printf("Pressione Enter para tentar novamente...");
         getchar();
+        apagar_linhas(3);
     } else {
         break; 
 }
@@ -232,9 +240,9 @@ void iniciar_tabuleiro(struct partida *jogo){
 for(int i=0; i<LINHAS; i++){
     for(int j=0; j<COLUNAS; j++){
 
-    jogo->matriz[i][j].ocupante = VAZIO; // altera o endereço de memoria matriz e preenche ela com 0 (vazio)
+    jogo->matriz[i][j].ocupante = VAZIO; // altera o endereço de memoria matriz e preenche ela com 0 
     jogo->matriz[i][j].tipo_ficha = FICHA_COMUM; // define que as fichas são padrão
-        strcpy(jogo->matriz[i][j].simbolo, " "); //define os simbolos da matriz para "nada"
+        strcpy(jogo->matriz[i][j].simbolo, " "); //define os simbolos da matriz para nada
 
      }
 }       
@@ -253,7 +261,7 @@ if(jogo.matriz[i][coluna].ocupante == VAZIO){
 altura = i; // Achou uma linha vazia
 return altura; // Retorna a linha encontrada
 }}
-return altura; // Se chegou aqui a coluna ta cheia (-1)
+return altura; // Se chegou aqui a coluna ta cheia = -1
 }
 
 void inserir_ficha(struct partida *jogo, int linha, int coluna, int id_jogador, int tipo_ficha){
@@ -327,19 +335,24 @@ jogo->turno++; //mais um turno é somado
 
 int selecionar_modo(){
 int modo;
+char buffer[100]; // buffer para fgets
 do {
 limpar_tela();
 printf("=== SELECIONE O MODO DE JOGO ===\n");
 printf("1. Player vs Player\n");
 printf("2. Player vs CPU\n");
 printf("3. CPU vs CPU\n");
+printf("4. Menu Principal\n");
 printf("Escolha: ");
-if (scanf("%d", &modo) != 1 || modo < 1 || modo > 3) { //verifica se o que foi digitado é número ou está entre 1 e 3, senao estiver, retorna para selecao
-printf("%sEntrada inválida!%s\n", cor_atencao, cor_reset);
-limpar_buffer();
+
+fgets(buffer, 100, stdin); // le input
+// verifica se o que foi digitado é número ou está entre 1 e 3
+if (sscanf(buffer, "%d", &modo) != 1 || modo < 1 || modo > 4) { 
+printf("%sCalma jovem padawan! Escolha um número entre 1 e 4.%s\n", cor_atencao, cor_reset);
+printf("Pressione Enter para tentar novamente...");
 getchar(); //congela a tela
+apagar_linhas(3);
 } else {
-limpar_buffer(); // estava pulando a vez do player colocar o nome pq etava ficando o enter na memoria, esse getchar vai limpar o buffer e corrigir isso.
 break;
 }
 } while (1);
@@ -390,7 +403,7 @@ void animar_portal(struct partida *jogo, int linha, int coluna) {
     printf("\n%s[PORTAL] Ativando portal na coluna %d...%s\n", cor_atencao, coluna + 1, cor_reset);
     
     //pausa visual
-    delay_visual(1200);
+    delay_visual(1500);
 
     //efeito de engolir que essa ficha tem
     jogo->matriz[linha][coluna].ocupante = VAZIO;
@@ -414,18 +427,18 @@ int usar_ficha_portal(struct partida *jogo, int coluna) {
             jogo->matriz[i][coluna].tipo_ficha = VAZIO;
             strcpy(jogo->matriz[i][coluna].simbolo, " ");
 
-            printf("%s>>> O Portal absorveu a ficha abaixo! <<<%s\n", cor_atencao, cor_reset);
+            printf("%s>>> O Portal absorveu a ficha abaixo! <<<%s\n", cor_p1, cor_reset);
             
             // organiza com a gravidade
             aplicar_gravidade(jogo, coluna);
-            delay_visual(800);
+            delay_visual(1500);
             return 1;
         }
     }
 
     // se a coluna estava vazia abaixo do portal
-    printf("%s>>> O Portal desapareceu no vazio! <<<%s\n", cor_atencao, cor_reset);
-    delay_visual(1200);
+    printf("%s>>> O Portal desapareceu no vazio do espaco! <<<%s\n", cor_p1, cor_reset);
+    delay_visual(1500);
     return 1;
 }
 
@@ -458,63 +471,78 @@ void jogada_cpu(struct partida *jogo, int *coluna_escolhida, int *tipo_escolhido
     *coluna_escolhida = -1; //estado invalido
     *tipo_escolhido = FICHA_COMUM; //padrao
 
-    int dado = rand() % 100; //gera numero entre 0 e 99
+    printf("%s calculando jogada..\n", cpu->nome);
+    delay_visual(1500);
 
-    printf("Computador pensando... (Rng: %d)\n", dado);
-    delay_visual(1200);
-
-    // TENTATIVA DE BLOQUEIO
-    if (dado < 35) {  //
-        //varre as colunas para ver se o inimigo ganharia na proxima
-        for (int c = 0; c < COLUNAS; c++) {
-            int linha = validar(c, *jogo);
-            if (linha != -1) {
-                //simula jogada do inimigo
-                jogo->matriz[linha][c].ocupante = id_inimigo;
-                
-                if (verificar_vitoria(*jogo, id_inimigo)) {
-                    //se vitoriam ele vai bloquar
-                    *coluna_escolhida = c;
-                    *tipo_escolhido = FICHA_COMUM;
-    
-                    // desfaz simulacao
-                    jogo->matriz[linha][c].ocupante = VAZIO; 
-                    return; //sai da funcao com a jogada definida
-                }
-                //desfaz simulacao
-                jogo->matriz[linha][c].ocupante = VAZIO;
+    // TENTATIVA DE VITORIA 
+    // a cpu vai verificar todas as colunas se alguma der vitoria imediata, ela joga
+    for (int c = 0; c < COLUNAS; c++) {
+        int linha = validar(c, *jogo);
+        if (linha != -1) {
+            jogo->matriz[linha][c].ocupante = cpu->id; //simula o tabuleiro
+            if (verificar_vitoria(*jogo, cpu->id)) {
+                *coluna_escolhida = c;
+                *tipo_escolhido = FICHA_COMUM;
+                jogo->matriz[linha][c].ocupante = VAZIO; // desfaz simulacao
+                return;
             }
+            jogo->matriz[linha][c].ocupante = VAZIO; // desfaz simulacao
         }
     }
 
-    // TENTATIVA DE EXPLOSAO
-    // Verifica se caiu no range e se tem ficha exploiva
-    if (dado >= 35 && dado < 70 && cpu->fichas_explosivas > 0) {
-        *tipo_escolhido = FICHA_EXPLOSIVA;
-        // tenta jogar onde tem peças inimigas
-        int tentativas = 0;
-        do {
-            *coluna_escolhida = rand() % COLUNAS;
-            tentativas++;
-        } while (validar(*coluna_escolhida, *jogo) == -1 && tentativas < 10);
-        
-        if (validar(*coluna_escolhida, *jogo) != -1) return;
+    // TENTATIVA DE BLOQUEIO
+    for (int c = 0; c < COLUNAS; c++) { //percorre colunas e verifica se a vitoria é valida para o inimgp
+        int linha = validar(c, *jogo);
+        if (linha != -1) {
+            jogo->matriz[linha][c].ocupante = id_inimigo; // simula inimigo
+            if (verificar_vitoria(*jogo, id_inimigo)) {
+                *coluna_escolhida = c;
+                *tipo_escolhido = FICHA_COMUM; // bloqueia com ficha comum
+                jogo->matriz[linha][c].ocupante = VAZIO; 
+                return;
+            }
+            jogo->matriz[linha][c].ocupante = VAZIO; //desfaz simulacao
+        }
     }
 
-    //  TENTATIVA DE PORTAL
-    if (dado >= 70 && cpu->fichas_portal > 0) {
+    // TENTATIVA DE USAR FICHAS ESPECIAIS
+    int dado = rand() % 100;
+
+    if (dado < 20 && cpu->fichas_portal > 0) { //20% de chance de usar porta;
         *tipo_escolhido = FICHA_PORTAL;
-        do {
-            *coluna_escolhida = rand() % COLUNAS;
-        } while (validar(*coluna_escolhida, *jogo) == -1);
+        *coluna_escolhida = rand() % COLUNAS; 
         return;
     }
 
-    // JOGADA PADROA
-    *tipo_escolhido = FICHA_COMUM;
+    if (dado >= 20 && dado < 40 && cpu->fichas_explosivas > 0) {//20% de chance de usar explosiva
+        int tentativas = 0;
+        do {
+            int c = rand() % COLUNAS;
+            if (validar(c, *jogo) != -1) {
+                *coluna_escolhida = c;
+                *tipo_escolhido = FICHA_EXPLOSIVA;
+                return;
+            }
+            tentativas++;
+        } while (tentativas < 10); //se falhar em achar lugar pra bomba, cai pra comum
+    }
+
+    // JOGADA PADRAO
+    *tipo_escolhido = FICHA_COMUM; //escolhe o tipo
+    int tentativas = 0; 
     do {
         *coluna_escolhida = rand() % COLUNAS;
-    } while (validar(*coluna_escolhida, *jogo) == -1);
+        tentativas++;
+    } while (validar(*coluna_escolhida, *jogo) == -1 && tentativas < 20);
+    if (validar(*coluna_escolhida, *jogo) == -1) { // o aleatrorio estava falhando quando tinham poucas jogadas possiveis, esse if evita e só joga onde é possivel
+        for (int c = 0; c < COLUNAS; c++) {
+            if (validar(c, *jogo) != -1) {
+                *coluna_escolhida = c;
+                *tipo_escolhido = FICHA_COMUM; // Corrigido para FICHA_COMUM
+                break;
+            }
+        }
+    }
 }
 
 
@@ -528,8 +556,8 @@ void iniciar_partida(struct partida *jogo) {
     jogo->game_on = 1; // jogo esta acontecendo
 
     // Inicializa fichas 
-    jogo->j1.fichas_comuns = 21; jogo->j1.fichas_explosivas = 2; jogo->j1.fichas_portal = 2; //  acessa pela struct jogo
-    jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 2; jogo->j2.fichas_portal = 2;
+    jogo->j1.fichas_comuns = 21; jogo->j1.fichas_explosivas = 0; jogo->j1.fichas_portal = 0; //  acessa pela struct jogo
+    jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 0; jogo->j2.fichas_portal = 0;
 
     //inicializa jogadas
     jogo->j1.jogadas = 0;
@@ -552,43 +580,51 @@ void iniciar_partida(struct partida *jogo) {
 
         if (jogador_vez->tipo == 0) { //player
             int escolha_valida = 0;
+            char buffer[100]; // Buffer para fgets local
+
+            //inventario
+            printf("Inventário: [C] Comum:%d | [E] Explosiva:%d | [P] Portal:%d\n",
+            jogador_vez->fichas_comuns, jogador_vez->fichas_explosivas, jogador_vez->fichas_portal);
 
             // Loop para seleção do tipo de ficha
             while (!escolha_valida) {
-                printf("Inventário: [C] Comum:%d | [E] Explosiva:%d | [P] Portal:%d\n",
-                       jogador_vez->fichas_comuns, jogador_vez->fichas_explosivas, jogador_vez->fichas_portal);
                 printf("Escolha o tipo de ficha: ");
+
+                if (fgets(buffer, 100, stdin) == NULL) continue;// le o input do player
+
                 char input;
 
-                if (scanf(" %c", &input) != 1) {
-                    limpar_buffer();
-                    continue;
+                if (sscanf(buffer, " %c", &input) != 1) { //tenta pegar a letra se falhar reinicia o loop
+                    apagar_linhas(1); // apaga a linha vazia do enter p n pular linha
+                    continue; 
                 }
-
-                limpar_buffer();
-
+                //logida de selecao do tipo
                 if (input == 'c' || input == 'C') tipo_f = FICHA_COMUM;
                 else if (input == 'e' || input == 'E') tipo_f = FICHA_EXPLOSIVA;
                 else if (input == 'p' || input == 'P') tipo_f = FICHA_PORTAL;
                 else {
-                    printf("%sOpção inválida!%s\n", cor_atencao, cor_reset);
+                    printf("%sCalma, jovem padawan! Tipo '%c' desconhecido! Use C, E ou P.%s\n", cor_atencao, input, cor_reset);
+                    delay_visual(3000); //pausa pra apagar as linhas
+                    apagar_linhas(3);
                     continue;
                 }
 
-                //Valida se o player possui a ficha no inventaio
+                //Valida se o player possui a ficha no inventario
                 if ((tipo_f == FICHA_COMUM && jogador_vez->fichas_comuns > 0) ||
                     (tipo_f == FICHA_EXPLOSIVA && jogador_vez->fichas_explosivas > 0) ||
                     (tipo_f == FICHA_PORTAL && jogador_vez->fichas_portal > 0)) {
                     escolha_valida = 1;
+                    apagar_linhas(1);
                 } else {
-                    printf("%sVocê não tem essa ficha!%s\n", cor_atencao, cor_reset);
-                }
+                    printf("%sVocê não tem essa ficha, jovem padawan!%s\n", cor_atencao, cor_reset);
+                    apagar_linhas(2); 
+                }   
             }
 
             printf("Escolha uma coluna (1-7): ");
 
-            if (scanf("%d", &coluna) != 1) { //tratamento de erro, se nao for itneiro cai nesse caso
-                limpar_buffer();
+            fgets(buffer, 100, stdin); // le numero
+            if (sscanf(buffer, "%d", &coluna) != 1) { //tratamento de erro, se nao for inteeiro cai nesse caso
                 coluna = -1;    // forca a coluna a ser inválida para cair no else
             } else {
                 coluna--; // ajuste de índice se a leitura foi ok
@@ -608,9 +644,9 @@ void iniciar_partida(struct partida *jogo) {
             if (linha != -1) { // se for valida, faz a jogada se for comum ou explosiva
                 inserir_ficha(jogo, linha, coluna, jogo->jogador_atual, tipo_f);
                 
-                // visualizacao de ficha antes de expldir (adicionado para efeito visual)
+                // visualizacao de ficha antes de expldir
                 desenhar_tabuleiro(*jogo); 
-                delay_visual(800); 
+                delay_visual(1500); 
 
                 int linha_baixo = linha + 1; // verificando coodenada abaixo da atual
 
@@ -619,21 +655,19 @@ void iniciar_partida(struct partida *jogo) {
 
                     if (alvo->tipo_ficha == FICHA_EXPLOSIVA) {
                         if (alvo->ocupante == jogo->jogador_atual) { //se a ficha for do jogador que jogou, desarma
-                            printf("Ficha explosiva desarmada!\n");
+                            printf("%s>>>Voce desarmou uma ficha explosiva! <<<%s\n", cor_atencao, cor_p2);
                             alvo->tipo_ficha = FICHA_COMUM; //troca o tipo da ficha para comum
                         } else { // se nao explode
-                            printf("BOOM! Voce ativou uma ficha explosiva do jogador inimigo!\n");
-                            delay_visual(1200); //pausa, detalhe visual
+                             printf("%s>>> Ficha explosiva acionada! <<<%s\n", cor_p2, cor_reset);
+                            delay_visual(1500); //pausa, detalhe visual
 
                             usar_ficha_explsosiva(jogo, linha_baixo, coluna);
 
-                            // atualiza tela para mostrar o buraco (visual novo)
+                            // atualiza tela para mostrar o buraco
                             desenhar_tabuleiro(*jogo);
-                            delay_visual(1000);
 
                             //aplicando gravidade pos explosao
-                            printf("Aplicando gravidade...\n");
-                            delay_visual(1200); //pausa, detalhe visual
+                            delay_visual(1500); //pausa, detalhe visual
                             for (int c = coluna - 1; c <= coluna + 1; c++) {
                                 if (c >= 0 && c < COLUNAS) { // garante que a coluna existe
                                     aplicar_gravidade(jogo, c); //gravidade
@@ -651,8 +685,8 @@ void iniciar_partida(struct partida *jogo) {
             } else {
                 // Se for CPU, ignoramos o print para nao poluir, se for player mostra erro
                 if (jogador_vez->tipo == 0) {
-                     printf("\n%sCOLUNA CHEIA!%s\n", cor_atencao, cor_reset); // se nao, jogada invalida
-                     delay_visual(1000);
+                      printf("\n%sEssa coluna está cheia padawan! Mude a estratégia.%s\n", cor_atencao, cor_reset); // se nao, jogada invalida
+                      delay_visual(1500);
                 }
             }
         }
@@ -679,7 +713,8 @@ void iniciar_partida(struct partida *jogo) {
 
                 int jogadas_final = (quem_venceu == PLAYER_1) ? jogo->j1.jogadas : jogo->j2.jogadas;//quantidade de jogadas ate a vitoria
 
-                printf("\n%s VITÓRIA DE %s! (em %d jogadas) %s\n", cor_vencedor, nome_vencedor, jogadas_final, cor_reset);
+                printf("\n%s VITORIA DE %s! em %d jogadas :) %s\n", cor_vencedor, nome_vencedor, jogadas_final, cor_reset);
+                printf("\nLembrem-se: vitória é silenciosa, o barulho é do ego ;)\n");
 
                 if (jogo->modo_jogo == 1 || (jogo->modo_jogo == 2 && quem_venceu == PLAYER_1)) { // salva no hall da fama
                     salvar_hall(nome_vencedor, jogadas_final);
@@ -687,7 +722,7 @@ void iniciar_partida(struct partida *jogo) {
 
                 jogo->game_on = 0;
             } else if (verificar_empate(jogo)) {
-                printf("\nEMPATE!\n");
+                printf("\n Após 42 rodadas de intensas batalhas, essa jornada acaba em EMPATE! \n");
                 jogo->game_on = 0;
             } else {
                 trocar_turno(jogo);
@@ -696,7 +731,7 @@ void iniciar_partida(struct partida *jogo) {
                     jogo->j1.fichas_explosivas++; jogo->j1.fichas_portal++;
                     jogo->j2.fichas_explosivas++; jogo->j2.fichas_portal++;
                     printf("\n%s Fichas especiais recebidas!%s\n", cor_atencao, cor_reset);
-                    delay_visual(1000);
+                    delay_visual(1500);
                 }
             }
         }
@@ -707,22 +742,24 @@ void iniciar_partida(struct partida *jogo) {
 int pos_jogo(){
 int opcao;
 int resultado;
-do{
+char buffer[100]; // buffer para fgets
+
 printf("\n============================\n");
 printf("1. Jogar Novamente\n");
 printf("2. Voltar ao Menu Principal\n");
 printf("3. Sair do Jogo\n");
-printf("Escolha uma opção: ");
 
-    resultado = scanf("%d", &opcao); // captura o que o usuario digitou
+do{
+    printf("Escolha uma opção: ");
+    fgets(buffer, 100, stdin); // le a linha
+    resultado = sscanf(buffer, "%d", &opcao);
 
     if (resultado != 1 || opcao < 1 || opcao > 3) { // verifica se é numero e se está entre 1 e 3
-        printf("%sEntrada inválida! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
+        printf("%sCalma, jovem padawan! Digite um número entre 1 e 3.%s\n", cor_atencao, cor_reset);
         
-        limpar_buffer(); // limpa o buffer, isso aqui é pre evitar algum tipoi de erro por lixo no buffer
-    
         printf("Pressione Enter para tentar novamente...");
         getchar();
+        apagar_linhas(3);
     } else {
         break; 
     }
@@ -795,7 +832,7 @@ void salvar_hall(char *nome_vencedor, int jogadas_vencedor) { // Salva o vencedo
 
         for (int i = 0; i < 3; i++) {
         if (jogadas_vencedor < top3[i].jogadas) { // Se as jogadas do vencedor forem menores, ele toma essa posição [i]
-           
+            
             for (int j = 2; j > i; j--) { // "Empurra" os que estão abaixo dele um degrau para baixo
 
                 top3[j] = top3[j-1]; // Começa do último (2) e vai puxando o de cima (j-1) até chegar na posição i
@@ -812,8 +849,8 @@ void salvar_hall(char *nome_vencedor, int jogadas_vencedor) { // Salva o vencedo
         fwrite(top3, sizeof(struct recorde), 3, arquivo);
         fclose(arquivo);
 
-        printf("\n%sPARABENS! Voce entrou para o Hall da Fama!%s\n", cor_atencao, cor_reset);
-        delay_visual(1000);
+        printf("\n%sPARABENS JOVEM PADAWAN! Voce entrou para o Hall da Fama!%s\n", cor_atencao, cor_reset);
+        delay_visual(1500);
         
     }
 }
@@ -869,7 +906,13 @@ while (1) {
     opcao_menu = mostar_menu_principal();
 
     if (opcao_menu == 1) { // se for 1 inicia o jogo
-        jogo.modo_jogo = selecionar_modo(); //seleciona modos
+        int modo_escolhido = selecionar_modo();
+
+            if (modo_escolhido == 4) {
+                continue; //volta para o inicio do loop
+            }
+        
+        jogo.modo_jogo = modo_escolhido;//se nao for 4 vamos jogar normalmente
         solicitar_nomes(&jogo.j1, &jogo.j2, jogo.modo_jogo); //solicita nomes
         
         int jogar_de_novo = 1; //jogar novamente recebe 1 para podermos jogar novamente
