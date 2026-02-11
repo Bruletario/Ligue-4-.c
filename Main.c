@@ -225,130 +225,6 @@ for(int i=0; i<LINHAS; i++){
 }
 }
 
-
-//== Hall da Fama ==//
-
-
-struct recorde { // Struct para salvar os dados no arquivo do hall da fama
-    char nome[50];
-    int jogadas;
-};
-
-#define ARQUIVO_HALL "hall_fama.bin" // Nome do arquivo do hall da fama
-
-// Verifica se o arquivo existe e cria se não existir
-int verificar_arquivo() {
-    FILE *arquivo = fopen(ARQUIVO_HALL, "rb"); // Tenta abrir para leitura
-
-    if (arquivo == NULL) {
-        // Caso não exista cria um arquivo 
-        arquivo = fopen(ARQUIVO_HALL, "wb");
-        if (arquivo == NULL) {
-            printf("Erro: Nao foi possivel criar o arquivo do Hall da Fama.\n"); // Se por algum motivo ainda não for possivel criar o arquivo
-            return -1; // Encerra com o valor (-1) pois não foi possivel criar o arquivo
-        }
-
-        struct recorde vazio;
-        strcpy(vazio.nome, "---"); // Estrutura para ainda sem jogadores
-        vazio.jogadas = 999; // Inicia com número pois tem que ser um inteiro e é facil fazer menos do que (999)
-        // Escreve 3 posições vazias
-        for (int i = 0; i < 3; i++) {
-            fwrite(&vazio, sizeof(struct recorde), 1, arquivo);
-        }
-
-         fclose(arquivo); 
-         return 1; // Encerra com o valor (1) pois o arquivo não existia e foi criado
-    }
-    
-    fclose(arquivo);
-    return 0; // Encerra com a execução normal e valor (0), pois o arquivo existe
-}
-
-
-void consultar_hall(struct recorde top3[3]) {  // Recebe um array como parâmetro e consulta o arquivo para preencher ele com o Hall
-    FILE *arquivo = fopen(ARQUIVO_HALL, "rb");
-    if (arquivo != NULL) {
-        fread(top3, sizeof(struct recorde), 3, arquivo);
-        fclose(arquivo);
-    }
-}
-
-
-
-void salvar_hall(char *nome_vencedor, int jogadas_vencedor) { // Salva o vencedor se ele merecer entrar no Hall
-    if(verificar_arquivo() == -1) return; // Se der erro ao verificar o arquivo já para a função
-    struct recorde top3[3]; 
-    consultar_hall(top3);
-
-    // Verifica se o vencedor atual entra no ranking
-
-    if (jogadas_vencedor < top3[2].jogadas) {   // Ele entra se tiver menos jogadas que o último da lista
-        
-
-         // Como a lista está já com um top 3 ordenado é só saber qual posição o jogador irá entrar para inserir ele
-
-        for (int i = 0; i < 3; i++) {
-        if (jogadas_vencedor < top3[i].jogadas) { // Se as jogadas do vencedor forem menores, ele toma essa posição [i]
-           
-            for (int j = 2; j > i; j--) { // "Empurra" os que estão abaixo dele um degrau para baixo
-
-                top3[j] = top3[j-1]; // Começa do último (2) e vai puxando o de cima (j-1) até chegar na posição i
-            }
-            
-            strcpy(top3[i].nome, nome_vencedor); // Insere o novo jogador na posição i
-            top3[i].jogadas = jogadas_vencedor;
-
-            break; // Sai do laço, já que inseriu
-        }
-    }
-        // Salva o ranking atualizado sobrescrevendo no arquivo
-        FILE *arquivo = fopen(ARQUIVO_HALL, "wb"); 
-        fwrite(top3, sizeof(struct recorde), 3, arquivo);
-        fclose(arquivo);
-
-        printf("\n%sPARABENS! Voce entrou para o Hall da Fama!%s\n", cor_atencao, cor_reset);
-        delay_visual(1000);
-        
-    }
-}
-
-
-
-
-void exibir_hall() {
-    struct recorde top3[3]; // Cria array p/ o hall top3
-    int status = verificar_arquivo(); // Verifica o arquivo e atribui o resultado na variavel status
-    consultar_hall(top3); // Consulta o arquivo preenchendo no array top3
-
-    limpar_tela();
-    switch (status)
-    {
-    case -1:
-        printf("Erro ao exibir o Hall da Fama.\n");
-        break;
-    case 1:
-        printf("Ainda não houveram partidas para exibir jogadores no Hall da Fama... \n \n");
-    case 0:
-        printf("========= HALL DA FAMA ========\n");
-        printf("NOME                  | JOGADAS\n");
-        printf("-------------------------------\n");
-        
-        for (int i = 0; i < 3; i++) {
-            if (top3[i].jogadas < 999) { // Só mostra se não for o vazio inicial (ao criar o arquivo) ou se o jogador tiver mais de 999 jogadas
-                printf("%-20s | %d\n", top3[i].nome, top3[i].jogadas); // Utiliza funcionalidade do printf para formatar o texto, com o "-" indicando que deve ser alinhado a esquerda e "20" que caso não preeencha devem ser pulados 20 caracteres
-            } else {
-                printf("%-20s | --\n", "---"); // Mesma formatação
-            }
-        }
-        printf("-------------------------------\n");
-        printf("Pressione Enter para voltar...");
-        limpar_buffer();
-        getchar();
-    }
-}
-
-
-
 //== Lógica ==//
 
 void iniciar_tabuleiro(struct partida *jogo){
@@ -574,6 +450,74 @@ void usar_ficha_explsosiva(struct partida *jogo, int linha, int coluna){
     }
 }
 
+//tentativa de implementar inteligencia na cpu
+void jogada_cpu(struct partida *jogo, int *coluna_escolhida, int *tipo_escolhido) {
+    struct jogador *cpu = (jogo->jogador_atual == PLAYER_1) ? &jogo->j1 : &jogo->j2; //aponta quem está jogando
+    int id_inimigo = (jogo->jogador_atual == PLAYER_1) ? PLAYER_2 : PLAYER_1; //define quem é o adversario
+    
+    *coluna_escolhida = -1; //estado invalido
+    *tipo_escolhido = FICHA_COMUM; //padrao
+
+    int dado = rand() % 100; //gera numero entre 0 e 99
+
+    printf("Computador pensando... (Rng: %d)\n", dado);
+    delay_visual(1200);
+
+    // TENTATIVA DE BLOQUEIO
+    if (dado < 35) {  //
+        //varre as colunas para ver se o inimigo ganharia na proxima
+        for (int c = 0; c < COLUNAS; c++) {
+            int linha = validar(c, *jogo);
+            if (linha != -1) {
+                //simula jogada do inimigo
+                jogo->matriz[linha][c].ocupante = id_inimigo;
+                
+                if (verificar_vitoria(*jogo, id_inimigo)) {
+                    //se vitoriam ele vai bloquar
+                    *coluna_escolhida = c;
+                    *tipo_escolhido = FICHA_COMUM;
+    
+                    // desfaz simulacao
+                    jogo->matriz[linha][c].ocupante = VAZIO; 
+                    return; //sai da funcao com a jogada definida
+                }
+                //desfaz simulacao
+                jogo->matriz[linha][c].ocupante = VAZIO;
+            }
+        }
+    }
+
+    // TENTATIVA DE EXPLOSAO
+    // Verifica se caiu no range e se tem ficha exploiva
+    if (dado >= 35 && dado < 70 && cpu->fichas_explosivas > 0) {
+        *tipo_escolhido = FICHA_EXPLOSIVA;
+        // tenta jogar onde tem peças inimigas
+        int tentativas = 0;
+        do {
+            *coluna_escolhida = rand() % COLUNAS;
+            tentativas++;
+        } while (validar(*coluna_escolhida, *jogo) == -1 && tentativas < 10);
+        
+        if (validar(*coluna_escolhida, *jogo) != -1) return;
+    }
+
+    //  TENTATIVA DE PORTAL
+    if (dado >= 70 && cpu->fichas_portal > 0) {
+        *tipo_escolhido = FICHA_PORTAL;
+        do {
+            *coluna_escolhida = rand() % COLUNAS;
+        } while (validar(*coluna_escolhida, *jogo) == -1);
+        return;
+    }
+
+    // JOGADA PADROA
+    *tipo_escolhido = FICHA_COMUM;
+    do {
+        *coluna_escolhida = rand() % COLUNAS;
+    } while (validar(*coluna_escolhida, *jogo) == -1);
+}
+
+
 
 // essa função controla o inicio da partida
 
@@ -583,11 +527,11 @@ void iniciar_partida(struct partida *jogo) {
     jogo->turno = 1; //começa no 1 turno
     jogo->game_on = 1; // jogo esta acontecendo
 
-    // Inicializa fichas
-    jogo->j1.fichas_comuns = 21; jogo->j1.fichas_explosivas = 0; jogo->j1.fichas_portal = 0; //  acessa pela struct jogo
-    jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 0; jogo->j2.fichas_portal = 0;
+    // Inicializa fichas 
+    jogo->j1.fichas_comuns = 21; jogo->j1.fichas_explosivas = 2; jogo->j1.fichas_portal = 2; //  acessa pela struct jogo
+    jogo->j2.fichas_comuns = 21; jogo->j2.fichas_explosivas = 2; jogo->j2.fichas_portal = 2;
 
-    // Inicializa as jogadas para computar no hall da fama
+    //inicializa jogadas
     jogo->j1.jogadas = 0;
     jogo->j2.jogadas = 0;
 
@@ -631,7 +575,7 @@ void iniciar_partida(struct partida *jogo) {
                     continue;
                 }
 
-                // Valida se o jogador possui a ficha no inventário
+                //Valida se o player possui a ficha no inventaio
                 if ((tipo_f == FICHA_COMUM && jogador_vez->fichas_comuns > 0) ||
                     (tipo_f == FICHA_EXPLOSIVA && jogador_vez->fichas_explosivas > 0) ||
                     (tipo_f == FICHA_PORTAL && jogador_vez->fichas_portal > 0)) {
@@ -645,17 +589,13 @@ void iniciar_partida(struct partida *jogo) {
 
             if (scanf("%d", &coluna) != 1) { //tratamento de erro, se nao for itneiro cai nesse caso
                 limpar_buffer();
-                coluna = -1;    // força a coluna a ser inválida para cair no else
+                coluna = -1;    // forca a coluna a ser inválida para cair no else
             } else {
-                coluna--; // Ajuste de índice se a leitura foi ok
+                coluna--; // ajuste de índice se a leitura foi ok
             }
         } else { // se nao, quem joga é a cpu
-            printf("Computador pensando...\n");
-            delay_visual(1500); // Pausa de 1,5 segundos para simular o pensamento da cpu
-
-            do coluna = rand() % COLUNAS; // tenta gerar um numero aleatorio
-            while (validar(coluna, *jogo) == -1); // se a jogada n for valida ele tenta novamente
-            tipo_f = FICHA_COMUM; // CPU por enquanto só usa comum
+            // chamando a jogada cpu
+            jogada_cpu(jogo, &coluna, &tipo_f);
         }
 
         if (tipo_f == FICHA_PORTAL) {
@@ -668,10 +608,9 @@ void iniciar_partida(struct partida *jogo) {
             if (linha != -1) { // se for valida, faz a jogada se for comum ou explosiva
                 inserir_ficha(jogo, linha, coluna, jogo->jogador_atual, tipo_f);
                 
-                //visualizacao de ficha antes de expldir
+                // visualizacao de ficha antes de expldir (adicionado para efeito visual)
                 desenhar_tabuleiro(*jogo); 
-                delay_visual(1200); //1,2s
-                
+                delay_visual(800); 
 
                 int linha_baixo = linha + 1; // verificando coodenada abaixo da atual
 
@@ -688,18 +627,19 @@ void iniciar_partida(struct partida *jogo) {
 
                             usar_ficha_explsosiva(jogo, linha_baixo, coluna);
 
-                            // atualiza tela para mostrar o buraco
+                            // atualiza tela para mostrar o buraco (visual novo)
                             desenhar_tabuleiro(*jogo);
-                            delay_visual(1200);
-                            
+                            delay_visual(1000);
+
                             //aplicando gravidade pos explosao
+                            printf("Aplicando gravidade...\n");
                             delay_visual(1200); //pausa, detalhe visual
                             for (int c = coluna - 1; c <= coluna + 1; c++) {
                                 if (c >= 0 && c < COLUNAS) { // garante que a coluna existe
                                     aplicar_gravidade(jogo, c); //gravidade
                                 }
                             }
-                            // mostra resultado final pos gravidade
+                            // mostra resultado final pos gravidade (visual novo)
                             desenhar_tabuleiro(*jogo);
                         }
                     }
@@ -707,19 +647,21 @@ void iniciar_partida(struct partida *jogo) {
                 if (tipo_f == FICHA_COMUM) jogador_vez->fichas_comuns--;
                 else if (tipo_f == FICHA_EXPLOSIVA) jogador_vez->fichas_explosivas--;
                 jogada_realizada = 1;
+                jogador_vez->jogadas++;//soma a quantidade de jogadas
             } else {
-                printf("\n%sCOLUNA CHEIA!%s\n", cor_atencao, cor_reset); // se nao, jogada invalida
-                delay_visual(1000);
+                // Se for CPU, ignoramos o print para nao poluir, se for player mostra erro
+                if (jogador_vez->tipo == 0) {
+                     printf("\n%sCOLUNA CHEIA!%s\n", cor_atencao, cor_reset); // se nao, jogada invalida
+                     delay_visual(1000);
+                }
             }
         }
 
         if (jogada_realizada) {
-            //se for portal checamos vitória dos dois
-            //Se foi comum checamos apenas para o atual
-            //tambem verifica empate e apos 10 turnos da as fichas bonus
-        
-            jogador_vez->jogadas++; // Conta +1 jogada pro dono do turno
-
+            // se for portal ou houve explosao checamos vitória dos dois pois o tabuleiro mudou muito
+            // Se foi comum checamos apenas para o atual
+            // tambem verifica empate e apos 10 turnos da fichas bonus
+            
             int venceu = 0;
             int quem_venceu = 0;
 
@@ -731,16 +673,17 @@ void iniciar_partida(struct partida *jogo) {
             }
 
             if (venceu) {
-                //cor do vencedor, etc
                 desenhar_tabuleiro(*jogo);
                 const char *cor_vencedor = (quem_venceu == PLAYER_1) ? cor_p1 : cor_p2;
                 char *nome_vencedor = (quem_venceu == PLAYER_1) ? jogo->j1.nome : jogo->j2.nome;
 
-                int jogadas_exatas = (quem_venceu == PLAYER_1) ? jogo->j1.jogadas : jogo->j2.jogadas; // Para saber a quantidade de jogadas que o vencedor levou
+                int jogadas_final = (quem_venceu == PLAYER_1) ? jogo->j1.jogadas : jogo->j2.jogadas;//quantidade de jogadas ate a vitoria
 
-                printf("\n%s VITÓRIA DE %s! %s\n", cor_vencedor, nome_vencedor, cor_reset);
+                printf("\n%s VITÓRIA DE %s! (em %d jogadas) %s\n", cor_vencedor, nome_vencedor, jogadas_final, cor_reset);
 
-                salvar_hall(nome_vencedor, jogadas_exatas);
+                if (jogo->modo_jogo == 1 || (jogo->modo_jogo == 2 && quem_venceu == PLAYER_1)) { // salva no hall da fama
+                    salvar_hall(nome_vencedor, jogadas_final);
+                }
 
                 jogo->game_on = 0;
             } else if (verificar_empate(jogo)) {
@@ -789,6 +732,131 @@ printf("Escolha uma opção: ");
 return opcao;
 }
 
+//== Hall da Fama ==//
+
+
+struct recorde { // Struct para salvar os dados no arquivo do hall da fama
+    char nome[50];
+    int jogadas;
+};
+
+#define ARQUIVO_HALL "hall_fama.bin" // Nome do arquivo do hall da fama
+
+// Verifica se o arquivo existe e cria se não existir
+int verificar_arquivo() {
+    FILE *arquivo = fopen(ARQUIVO_HALL, "rb"); // Tenta abrir para leitura
+
+    if (arquivo == NULL) {
+        // Caso não exista cria um arquivo 
+        arquivo = fopen(ARQUIVO_HALL, "wb");
+        if (arquivo == NULL) {
+            printf("Erro: Nao foi possivel criar o arquivo do Hall da Fama.\n"); // Se por algum motivo ainda não for possivel criar o arquivo
+            return -1; // Encerra com o valor (-1) pois não foi possivel criar o arquivo
+        }
+
+        struct recorde vazio;
+        strcpy(vazio.nome, "---"); // Estrutura para ainda sem jogadores
+        vazio.jogadas = 999; // Inicia com número pois tem que ser um inteiro e é facil fazer menos do que (999)
+        // Escreve 3 posições vazias
+        for (int i = 0; i < 3; i++) {
+            fwrite(&vazio, sizeof(struct recorde), 1, arquivo);
+        }
+
+         fclose(arquivo); 
+         return 1; // Encerra com o valor (1) pois o arquivo não existia e foi criado
+    }
+    
+    fclose(arquivo);
+    return 0; // Encerra com a execução normal e valor (0), pois o arquivo existe
+}
+
+
+void consultar_hall(struct recorde top3[3]) {  // Recebe um array como parâmetro e consulta o arquivo para preencher ele com o Hall
+    FILE *arquivo = fopen(ARQUIVO_HALL, "rb");
+    if (arquivo != NULL) {
+        fread(top3, sizeof(struct recorde), 3, arquivo);
+        fclose(arquivo);
+    }
+}
+
+
+
+void salvar_hall(char *nome_vencedor, int jogadas_vencedor) { // Salva o vencedor se ele merecer entrar no Hall
+    if(verificar_arquivo() == -1) return; // Se der erro ao verificar o arquivo já para a função
+    struct recorde top3[3]; 
+    consultar_hall(top3);
+
+    // Verifica se o vencedor atual entra no ranking
+
+    if (jogadas_vencedor < top3[2].jogadas) {   // Ele entra se tiver menos jogadas que o último da lista
+        
+
+         // Como a lista está já com um top 3 ordenado é só saber qual posição o jogador irá entrar para inserir ele
+
+        for (int i = 0; i < 3; i++) {
+        if (jogadas_vencedor < top3[i].jogadas) { // Se as jogadas do vencedor forem menores, ele toma essa posição [i]
+           
+            for (int j = 2; j > i; j--) { // "Empurra" os que estão abaixo dele um degrau para baixo
+
+                top3[j] = top3[j-1]; // Começa do último (2) e vai puxando o de cima (j-1) até chegar na posição i
+            }
+            
+            strcpy(top3[i].nome, nome_vencedor); // Insere o novo jogador na posição i
+            top3[i].jogadas = jogadas_vencedor;
+
+            break; // Sai do laço, já que inseriu
+        }
+    }
+        // Salva o ranking atualizado sobrescrevendo no arquivo
+        FILE *arquivo = fopen(ARQUIVO_HALL, "wb"); 
+        fwrite(top3, sizeof(struct recorde), 3, arquivo);
+        fclose(arquivo);
+
+        printf("\n%sPARABENS! Voce entrou para o Hall da Fama!%s\n", cor_atencao, cor_reset);
+        delay_visual(1000);
+        
+    }
+}
+
+
+
+
+void exibir_hall() {
+    struct recorde top3[3]; // Cria array p/ o hall top3
+    int status = verificar_arquivo(); // Verifica o arquivo e atribui o resultado na variavel status
+    consultar_hall(top3); // Consulta o arquivo preenchendo no array top3
+
+    limpar_tela();
+    switch (status)
+    {
+    case -1:
+        printf("Erro ao exibir o Hall da Fama.\n");
+        break;
+    case 1:
+        printf("Ainda não houveram partidas para exibir jogadores no Hall da Fama... \n \n");
+        printf("Pressione Enter para voltar...");
+        limpar_buffer();
+        getchar();
+        break;
+    case 0:
+        printf("========= HALL DA FAMA ========\n");
+        printf("NOME                  | JOGADAS\n");
+        printf("-------------------------------\n");
+        
+        for (int i = 0; i < 3; i++) {
+            if (top3[i].jogadas < 999) { // Só mostra se não for o vazio inicial (ao criar o arquivo) ou se o jogador tiver mais de 999 jogadas
+                printf("%-20s | %d\n", top3[i].nome, top3[i].jogadas); // Utiliza funcionalidade do printf para formatar o texto, com o "-" indicando que deve ser alinhado a esquerda e "20" que caso não preeencha devem ser pulados 20 caracteres
+            } else {
+                printf("%-20s | --\n", "---"); // Mesma formatação
+            }
+        }
+        printf("-------------------------------\n");
+        printf("Pressione Enter para voltar...");
+        limpar_buffer();
+        getchar();
+    }
+}
+
 //==Main==//
 int main() {
 struct partida jogo = {0}; //recebe o estado - deixamos zerado para evitar lixo de momoria
@@ -815,8 +883,7 @@ while (1) {
         }
     } 
     else if (opcao_menu == 2)  {
-        exibir_hall();
-    }
+        exibir_hall();}
         
     else if (opcao_menu == 3) {
         printf("Que a força esteja com você!\n");
