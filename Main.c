@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // pra encerrar o jogo e configurar ambiente no terminal
@@ -690,6 +691,8 @@ void iniciar_partida(struct partida *jogo) {
                 }
             }
         }
+
+        void salvar_hall(char *nome_vencedor, int jogadas_vencedor);
 
         if (jogada_realizada) {
             // se for portal ou houve explosao checamos vitória dos dois pois o tabuleiro mudou muito
